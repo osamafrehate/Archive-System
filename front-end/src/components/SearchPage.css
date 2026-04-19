@@ -1,0 +1,263 @@
+.search-page {
+  width: 100%;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+}
+
+.search-content {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  gap: 20px;
+}
+
+.search-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #000000;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.search-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.form-row {
+  display: flex;
+  gap: 20px;
+}
+
+.form-row .form-group {
+  flex: 1;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333333;
+}
+
+.form-input {
+  padding: 12px 16px;
+  border: 1px solid #cccccc;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #000000;
+  background-color: #fafafa;
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+  font-family: inherit;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #4caf50;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.form-input::placeholder {
+  color: #999999;
+}
+
+.search-actions {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.search-button,
+.reset-button {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.search-button.enabled {
+  background-color: #4caf50;
+  color: white;
+}
+
+.search-button.enabled:hover {
+  background-color: #45a049;
+  transform: translateY(-2px);
+}
+
+.search-button.disabled {
+  background-color: #cccccc;
+  color: #999999;
+  cursor: not-allowed;
+}
+
+.reset-button {
+  background-color: #2196f3;
+  color: white;
+}
+
+.reset-button:hover {
+  background-color: #0d47a1;
+  transform: translateY(-2px);
+}
+
+.results-section {
+  width: 100%;
+  margin: 0 auto;
+  margin-top: 40px;
+}
+
+.results-section h3 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #000000;
+  margin-bottom: 20px;
+}
+
+.files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.file-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.file-info {
+  display: flex;
+  flex-direction: row;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.file-info strong {
+  font-size: 16px;
+  color: #000000;
+}
+
+.file-info span {
+  font-size: 14px;
+  color: #666666;
+}
+
+.view-button {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+}
+
+.view-button:hover {
+  background-color: #45a049;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .form-row {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .search-actions {
+    flex-direction: column;
+  }
+
+  .file-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}
+
+/* Table Styles (from StatusFilePage) */
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.status-file-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.status-file-table th,
+.status-file-table td {
+  border: 1px solid #e4e7eb;
+  padding: 12px 14px;
+  text-align: left;
+  font-size: 14px;
+}
+
+.status-file-table th {
+  background-color: #f1f5f9;
+  color: #333;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.status-file-table tbody tr:nth-child(even) {
+  background-color: #fbfcfd;
+}
+
+.status-file-table tbody tr:hover {
+  background-color: #f0f0f0;
+  transition: background-color 0.2s ease;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 82px;
+}
+
+.status-blue {
+  background-color: #2196f3;
+  color: #fff;
+}
+
+.status-yellow {
+  background-color: #ffeb3b;
+  color: #1f1f1f;
+}
+
+.status-red {
+  background-color: #ef5350;
+  color: #fff;
+}
