@@ -34,10 +34,10 @@ namespace Archive.Infrastructure.Services.Authentication
             if (!_hasher.Verify(password, user.PasswordHash))
                 throw new Exception("Invalid credentials");
 
-            
-            var token = _jwt.GenerateToken(user.Id, user.Username);
 
-            
+            var token = _jwt.GenerateToken(user.Id, user.Username, user.Role);
+
+
             //var permissions = await _userRepo.GetUserPermissionsAsync(user.Id, ct);
 
             //var dict = permissions.ToDictionary(

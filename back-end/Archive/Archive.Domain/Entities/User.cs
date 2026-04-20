@@ -13,12 +13,14 @@ namespace Archive.Domain.Entities
         public string PasswordHash { get; private set; } = null!;
         public bool IsActive { get; private set; }
 
+        public string Role { get; private set; } = null!;
+
         public ICollection<UserCategoryPermission> UserCategoryPermissions { get; private set; } = new List<UserCategoryPermission>();
         public ICollection<FileArchive> UploadedFiles { get; private set; } = new List<FileArchive>();
 
         private User() { }
 
-        public User(string username, string passwordHash)
+        public User(string username, string passwordHash, string role = "User")
         {
             if (string.IsNullOrWhiteSpace(username))
                 throw new ArgumentException("Username is required");
@@ -29,9 +31,20 @@ namespace Archive.Domain.Entities
             Username = username;
             PasswordHash = passwordHash;
             IsActive = true;
+
+            Role = role;
+        }
+
+        public void SetRole(string role)
+        {
+            if (string.IsNullOrWhiteSpace(role))
+                throw new ArgumentException("Role is required");
+
+            Role = role;
         }
 
         public void Deactivate() => IsActive = false;
         public void Activate() => IsActive = true;
     }
 }
+

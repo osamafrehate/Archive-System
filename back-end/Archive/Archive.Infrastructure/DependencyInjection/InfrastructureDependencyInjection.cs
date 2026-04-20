@@ -32,8 +32,8 @@ namespace Archive.Infrastructure.DependencyInjection
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IJwtTokenService, JwtTokenService>();
             services.AddScoped<IPasswordHasher, PasswordHasher>();
-            //services
-            services.AddScoped<IFileService, FileService>();
+            
+            
 
             // Redis
             //services.AddSingleton<IConnectionMultiplexer>(_ =>
@@ -45,6 +45,9 @@ namespace Archive.Infrastructure.DependencyInjection
             //Repo
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IFileRepository, FileRepository>();
+            services.AddScoped<IUserCategoryPermissionRepository, UserCategoryPermissionRepository>();
+            services.AddScoped<IPermissionRepository, PermissionRepository>();
+            services.AddScoped<ICategoryRepository, CategoryRepository>();
 
 
             //Authz

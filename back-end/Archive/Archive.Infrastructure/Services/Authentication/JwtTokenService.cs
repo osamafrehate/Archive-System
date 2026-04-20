@@ -1,6 +1,7 @@
 ﻿using Archive.Application.Interfaces.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
@@ -20,7 +21,7 @@ namespace Archive.Infrastructure.Services.Authentication
             _config = config;
         }
 
-        public string GenerateToken(int userId, string username)
+        public string GenerateToken(int userId, string username, string role)
         {
             var jwtSettings = _config.GetSection("Jwt");
 
@@ -30,10 +31,11 @@ namespace Archive.Infrastructure.Services.Authentication
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var claims = new[]
-            {
+{
             new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-            new Claim(ClaimTypes.Name, username)
-        };
+            new Claim(ClaimTypes.Name, username),
+            new Claim(ClaimTypes.Role, role) 
+            };
 
             var token = new JwtSecurityToken(
                 issuer: jwtSettings["Issuer"],

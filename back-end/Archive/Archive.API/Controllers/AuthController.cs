@@ -1,6 +1,7 @@
 ﻿using Archive.Application.DTOs;
 using Archive.Application.Interfaces.Authentication;
 using Microsoft.AspNetCore.Mvc;
+using StackExchange.Redis;
 using System.Security.Claims;
 
 namespace Archive.API.Controllers;
@@ -44,11 +45,14 @@ public class AuthController : ControllerBase
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var username = User.FindFirst(ClaimTypes.Name)?.Value;
+        var role = User.FindFirst(ClaimTypes.Role)?.Value;
+
 
         return Ok(new
         {
             UserId = userId,
             Username = username,
+            Role = role,
             IsAuthenticated = User.Identity?.IsAuthenticated
         });
     }

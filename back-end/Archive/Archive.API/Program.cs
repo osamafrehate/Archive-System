@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Archive.Infrastructure.DependencyInjection;
+using Archive.Application.DependencyInjection;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,7 +11,10 @@ var builder = WebApplication.CreateBuilder(args);
 // Infrastructure DI
 // =========================
 builder.Services.AddInfrastructure(builder.Configuration);
-
+// =========================
+// Application DI
+// =========================
+builder.Services.AddApplication(builder.Configuration);
 // =========================
 // Controllers
 // =========================

@@ -11,22 +11,35 @@ namespace Archive.Domain.Entities
     {
         public string Name { get; private set; } = null!;
         public bool IsActive { get; private set; }
-
-        public ICollection<UserCategoryPermission> UserCategoryPermissions { get; private set; } = new List<UserCategoryPermission>();
         public ICollection<FileArchive> Files { get; private set; } = new List<FileArchive>();
+        public ICollection<UserCategoryPermission> UserCategoryPermissions { get; private set; } = new List<UserCategoryPermission>();
 
         private Category() { }
 
         public Category(string name)
         {
+            SetName(name);
+            IsActive = true;
+        }
+
+        public void UpdateName(string name)
+        {
+            SetName(name);
+            SetUpdated();
+        }
+
+        private void SetName(string name)
+        {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Category name is required");
 
             Name = name;
-            IsActive = true;
         }
 
-        public void Deactivate() => IsActive = false;
-        public void Activate() => IsActive = true;
+        public void Deactivate()
+        {
+            IsActive = false;
+            SetUpdated();
+        }
     }
 }
