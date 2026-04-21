@@ -16,5 +16,6 @@ namespace Archive.Application.Interfaces.Services
         Task UpdateAsync(int id, UpdatePermissionDto dto, CancellationToken ct);
 
         Task DeleteAsync(int id, CancellationToken ct);
+        
     }
 }

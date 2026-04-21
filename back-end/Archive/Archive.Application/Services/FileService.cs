@@ -2,116 +2,87 @@
 using Archive.Application.Interfaces.Authentication;
 using Archive.Application.Interfaces.Repositories;
 using Archive.Application.Interfaces.Services;
-using Archive.Domain.Entities;
 
-namespace Archive.API.Services
+namespace Archive.Application.Services
 {
-
-
     public class FileService : IFileService
-
     {
+        private const int PageSize = 50;
+
         private readonly IFileRepository _repo;
         private readonly IPermissionService _permissionService;
+        private readonly IFileStorageService _storage;
+        private readonly ICategoryRepository _categoryRepo;
 
-        public FileService(IFileRepository repo, IPermissionService permissionService)
+        public FileService(
+            IFileRepository repo,
+            IPermissionService permissionService,
+            IFileStorageService storage,
+            ICategoryRepository categoryRepo)
         {
             _repo = repo;
             _permissionService = permissionService;
+            _storage = storage;
+            _categoryRepo = categoryRepo;
         }
 
-        //public async Task<List<FileDto>> GetAllAsync(CancellationToken ct)
-        //{
-        //    var files = await _repo.GetAllAsync(ct);
-
-        //    return files.Select(x => new FileDto
-        //    {
-        //        Id = x.Id,
-        //        FileNumber = x.FileNumber,
-        //        FileName = x.FileName,
-        //        UploadedAt = x.UploadedAt,
-        //        CategoryName = x.Category.Name,
-        //        UploadedByUsername = x.UploadedBy.Username,
-        //        Status = CalculateStatus(x.ExpireDate),
-        //        Amount= x.Amount,
-        //    }).ToList();
-        //}
-        public async Task<List<FileDto>> GetAllAsync(int userId, CancellationToken ct)
+        public async Task<List<FileDto>> GetAllAsync(
+            int userId,
+            int page,
+            CancellationToken ct)
         {
-            var files = await _repo.GetAllAsync(ct);
+            var files = await _repo.GetPagedAsync(
+                userId,
+                page,
+                PageSize,
+                ct);
 
-            var result = new List<FileDto>();
-
-            foreach (var file in files)
+            return files.Select(file => new FileDto
             {
-                var hasAccess = await _permissionService.HasPermissionAsync(
-                    userId,
-                    file.CategoryId,
-                    "READ"
-                );
-
-                if (!hasAccess)
-                    continue;
-
-                result.Add(new FileDto
-                {
-                    Id = file.Id,
-                    FileNumber = file.FileNumber,
-                    FileName = file.FileName,
-                    UploadedAt = file.UploadedAt,
-                    CategoryName = file.Category.Name,
-                    UploadedByUsername = file.UploadedBy.Username,
-                    Amount = file.Amount,
-                    Status = CalculateStatus(file.ExpireDate)
-                });
-            }
-
-            return result;
+                Id = file.Id,
+                FileNumber = file.FileNumber,
+                FileName = file.FileName,
+                UploadedAt = file.UploadedAt,
+                InputDate = file.InputDate,
+                ExpireDate = file.ExpireDate,
+                CategoryName = file.Category.Name,
+                UploadedByUsername = file.UploadedBy.Username,
+                Amount = file.Amount,
+                Status = CalculateStatus(file.ExpireDate)
+            }).ToList();
         }
-        private string CalculateStatus(DateTime? expireDate)
-        {
-            if (!expireDate.HasValue)
-                return "UNKNOWN";
 
-            var days = (expireDate.Value - DateTime.UtcNow).TotalDays;
-
-            if (days <= 14)
-                return "RED";
-
-            if (days <= 180)
-                return "YELLOW";
-
-            return "GREEN";
-        }
-        //public async Task<int> UploadAsync(UploadFileDto dto, int userId, CancellationToken ct)
-        //{
-        //    var file = new FileArchive(
-        //        userId,
-        //        dto.CategoryId,
-        //        dto.FileNumber,
-        //        dto.FileName,
-        //        dto.InputDate,
-        //        dto.ExpireDate,
-        //        dto.Amount,
-        //        null // FilePath لاحقاً
-        //    );
-
-        //    await _repo.AddAsync(file, ct);
-
-        //    return file.Id;
-        //}
-        public async Task<int> UploadAsync(UploadFileDto dto, int userId, CancellationToken ct)
+        public async Task<int> UploadAsync(
+    UploadFileDto dto,
+    Stream fileStream,
+    string extension,
+    int userId,
+    CancellationToken ct)
         {
             var hasPermission = await _permissionService.HasPermissionAsync(
                 userId,
                 dto.CategoryId,
-                "WRITE"
-            );
+                "WRITE");
 
             if (!hasPermission)
-                throw new Exception("You do not have permission to upload in this category");
+                throw new Exception("No permission to upload");
 
-            var file = new FileArchive(
+            var categoryName = await _categoryRepo.GetCategoryNameAsync(
+                dto.CategoryId,
+                ct);
+
+            if (categoryName == null)
+                throw new Exception("Category not found");
+
+            var filePath = await _storage.SaveFileAsync(
+                categoryName,
+                dto.FileName,
+                dto.FileNumber,
+                extension,
+                fileStream,
+                ct);
+
+            var file = new Domain.Entities.FileArchive(
                 userId,
                 dto.CategoryId,
                 dto.FileNumber,
@@ -119,12 +90,23 @@ namespace Archive.API.Services
                 dto.InputDate,
                 dto.ExpireDate,
                 dto.Amount,
-                null
-            );
+                filePath);
 
             await _repo.AddAsync(file, ct);
 
             return file.Id;
+        }
+
+        private static string CalculateStatus(DateTime? expireDate)
+        {
+            if (!expireDate.HasValue)
+                return "UNKNOWN";
+
+            var days = (expireDate.Value - DateTime.UtcNow).TotalDays;
+
+            return days <= 14 ? "RED"
+                 : days <= 180 ? "YELLOW"
+                 : "GREEN";
         }
     }
 }

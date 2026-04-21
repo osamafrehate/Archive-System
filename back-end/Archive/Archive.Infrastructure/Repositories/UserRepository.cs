@@ -44,5 +44,16 @@ namespace Archive.Infrastructure.Repositories
             await _context.Users.AddAsync(user, ct);
             await _context.SaveChangesAsync(ct);
         }
+        public async Task<List<User>> SearchByUsernameAsync(string keyword, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+                return await _context.Users.ToListAsync(ct);
+
+            keyword = keyword.ToLower();
+
+            return await _context.Users
+            .Where(x => EF.Functions.Like(x.Username, $"%{keyword}%"))
+            .ToListAsync(ct);
+        }
     }
 }

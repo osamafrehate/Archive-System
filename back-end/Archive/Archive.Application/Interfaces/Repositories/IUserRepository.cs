@@ -15,5 +15,6 @@ namespace Archive.Application.Interfaces.Repositories
 
         Task<List<UserCategoryPermission>> GetUserPermissionsAsync(int userId, CancellationToken ct);
         Task AddAsync(User user, CancellationToken ct);
+        Task<List<User>> SearchByUsernameAsync(string keyword, CancellationToken ct);
     }
 }

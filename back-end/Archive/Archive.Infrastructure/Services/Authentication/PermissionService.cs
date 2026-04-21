@@ -24,6 +24,14 @@ namespace Archive.Infrastructure.Services.Authentication
                     x.CategoryId == categoryId &&
                     x.Permission.Name == permissionName);
         }
+        public async Task<bool> HasAnyPermissionAsync(int userId, string permissionName)
+        {
+            return await _context.UserCategoryPermissions
+                .Include(x => x.Permission)
+                .AnyAsync(x =>
+                    x.UserId == userId &&
+                    x.Permission.Name == permissionName);
+        }
         //    //private readonly IRedisService _redis;
 
         //    //public PermissionService(IRedisService redis)

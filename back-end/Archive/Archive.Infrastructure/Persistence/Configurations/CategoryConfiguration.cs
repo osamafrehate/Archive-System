@@ -24,9 +24,13 @@ namespace Archive.Infrastructure.Persistence.Configurations
             builder.Property(x => x.IsActive)
                  .IsRequired()
                     .HasDefaultValue(true);
+
             builder.Property(x => x.CreatedAt)
                   .IsRequired()
                     .HasDefaultValueSql("GETUTCDATE()");
+
+            builder.HasIndex(x => x.Name)
+                     .IsUnique();
         }
     }
 }

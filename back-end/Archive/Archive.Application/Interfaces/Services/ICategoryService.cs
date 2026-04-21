@@ -9,10 +9,17 @@ namespace Archive.Application.Interfaces.Services
 {
     public interface ICategoryService
     {
-        Task CreateAsync(string name, CancellationToken ct);
+        Task<List<CategoryDto>> GetAllAsync(CancellationToken ct);
+
+        Task CreateAsync(int userId, string name, CancellationToken ct);
 
         Task UpdateAsync(int userId, int categoryId, string name, CancellationToken ct);
 
         Task DeleteAsync(int userId, int categoryId, CancellationToken ct);
+        Task<List<CategoryDto>> GetUserCategoriesAsync(int userId, CancellationToken ct);
+       
+        Task<List<CategoryDto>> GetUserCategoriesEditPermissionAsync(int userId, CancellationToken ct);
+
+        Task ActivateByNameAsync(string categoryName, CancellationToken ct);
     }
 }

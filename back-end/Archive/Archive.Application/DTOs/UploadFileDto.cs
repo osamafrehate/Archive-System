@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Http;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,8 +10,10 @@ namespace Archive.Application.DTOs
     public class UploadFileDto
     {
         public int CategoryId { get; set; }
-        public string FileNumber { get; set; }
-        public string FileName { get; set; }
+      
+
+        public string FileNumber { get; set; } = null!;
+        public string FileName { get; set; } = null!;
 
         public DateTime? InputDate { get; set; }
         public DateTime? ExpireDate { get; set; }

@@ -2,11 +2,6 @@
 using Archive.Domain.Entities;
 using Archive.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Archive.Infrastructure.Repositories
 {
@@ -21,12 +16,21 @@ namespace Archive.Infrastructure.Repositories
 
         public async Task<List<Category>> GetAllAsync(CancellationToken ct)
         {
-            return await _context.Categories.ToListAsync(ct);
+            return await _context.Categories.AsNoTracking().ToListAsync(ct);
         }
+
+        //public async Task<List<Category>> GetActiveAsync(CancellationToken ct)
+        //{
+        //    return await _context.Categories
+        //        .Where(x => x.IsActive)
+        //        .OrderBy(x => x.Name)
+        //        .ToListAsync(ct);
+        //}
 
         public async Task<Category?> GetByIdAsync(int id, CancellationToken ct)
         {
-            return await _context.Categories.FindAsync(new object[] { id }, ct);
+            return await _context.Categories
+                .FirstOrDefaultAsync(x => x.Id == id, ct);
         }
 
         public async Task AddAsync(Category category, CancellationToken ct)
@@ -38,5 +42,59 @@ namespace Archive.Infrastructure.Repositories
         {
             await _context.SaveChangesAsync(ct);
         }
+
+        public async Task<bool> ExistsByNameAsync(string name, CancellationToken ct)
+        {
+            return await _context.Categories
+                .AnyAsync(x => x.Name.ToLower() == name.ToLower(), ct);
+        }
+        public async Task<List<Category>> GetUserCategoriesAsync(int userId, CancellationToken ct)
+        {
+            return await _context.Categories
+           .Where(c =>
+            c.IsActive &&
+            c.UserCategoryPermissions.Any(p =>
+                p.UserId == userId &&
+                p.PermissionId == 2 // WRITE
+            )
+           )
+           .AsNoTracking()
+           .ToListAsync(ct);
+        }
+        public async Task<List<Category>> GetUserCategoriesEditPermissionAsync(int userId, CancellationToken ct)
+        {
+            return await _context.Categories
+           .Where(c =>
+            c.IsActive &&
+            c.UserCategoryPermissions.Any(p =>
+                p.UserId == userId &&
+                p.PermissionId == 3 // Edit
+            )
+           )
+           .AsNoTracking()
+           .ToListAsync(ct);
+        }
+        public async Task ActivateByNameAsync(string categoryName, CancellationToken ct)
+        {
+            var category = await _context.Categories
+    .FirstOrDefaultAsync(x => x.Name == categoryName, ct);
+
+            if (category == null)
+                throw new Exception("Category not found");
+
+            category.Activate();
+
+            await _context.SaveChangesAsync(ct);
+
+        }
+        public async Task<string?> GetCategoryNameAsync(
+          int categoryId,
+           CancellationToken ct)
+          {
+            return await _context.Categories
+                .Where(c => c.Id == categoryId)
+                .Select(c => c.Name)
+                .FirstOrDefaultAsync(ct);
+          }
     }
 }

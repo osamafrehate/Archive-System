@@ -1,4 +1,4 @@
-﻿using Archive.API.Services;
+﻿
 using Archive.Application.Interfaces.Services;
 using Archive.Application.Services;
 using Microsoft.Extensions.Configuration;
@@ -22,6 +22,8 @@ namespace Archive.Application.DependencyInjection
             services.AddScoped<IAdminService, AdminService>();
             services.AddScoped<ICategoryService, CategoryService>();
             services.AddScoped<IPermissionServiceApp, PermissionServiceApp>();
+            services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IFileStorageService, FileStorageService>();
 
             return services;
         }

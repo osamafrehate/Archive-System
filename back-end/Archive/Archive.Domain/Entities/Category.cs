@@ -41,5 +41,10 @@ namespace Archive.Domain.Entities
             IsActive = false;
             SetUpdated();
         }
+        public void Activate()
+        {
+            IsActive = true;
+            SetUpdated();
+        }
     }
 }

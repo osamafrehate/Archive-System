@@ -1,6 +1,6 @@
-﻿using Archive.Application.Interfaces.Services;
+﻿using Archive.Application.DTOs;
+using Archive.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -17,15 +17,58 @@ namespace Archive.API.Controllers
             _service = service;
         }
 
+        [HttpGet]
+        [Authorize(Roles ="Admin")]
+        public async Task<IActionResult> GetAll(CancellationToken ct)
+        {
+            var categories = await _service.GetAllAsync(ct);
+
+            return Ok(categories);
+        }
+        //get Categories related to user as long as the user has Write permission on this category
+        [HttpGet("UserCategories")]
+        public async Task<IActionResult> GetUserCategories(CancellationToken ct)
+        {
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (claim == null)
+                return Ok(new List<CategoryDto>());
+
+            int userId = int.Parse(claim.Value);
+
+            var result = await _service.GetUserCategoriesAsync(userId, ct);
+
+            return Ok(result);
+        }
+        //get Categories related to user as long as the user has Edit permission on this category
+        [HttpGet("UserCategoriesEditPermission")]
+        public async Task<IActionResult> GetUserCategoriesEditPermission(CancellationToken ct)
+        {
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (claim == null)
+                return Ok(new List<CategoryDto>());
+
+            int userId = int.Parse(claim.Value);
+
+            var result = await _service.GetUserCategoriesEditPermissionAsync(userId, ct);
+
+            return Ok(result);
+        }
+
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize]
         public async Task<IActionResult> Create(string name, CancellationToken ct)
         {
-            await _service.CreateAsync(name, ct);
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            await _service.CreateAsync(userId, name, ct);
+
             return Ok();
         }
 
         [HttpPut("{id}")]
+        [Authorize]
         public async Task<IActionResult> Update(int id, string name, CancellationToken ct)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
@@ -36,6 +79,7 @@ namespace Archive.API.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize]
         public async Task<IActionResult> Delete(int id, CancellationToken ct)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
@@ -43,6 +87,19 @@ namespace Archive.API.Controllers
             await _service.DeleteAsync(userId, id, ct);
 
             return Ok();
+        }
+        [HttpPut("activate-by-name")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ActivateByName(
+        [FromQuery] string name,
+        CancellationToken ct)
+        {
+            await _service.ActivateByNameAsync(name, ct);
+
+            return Ok(new
+            {
+                Message = "Category activated successfully"
+            });
         }
     }
 }

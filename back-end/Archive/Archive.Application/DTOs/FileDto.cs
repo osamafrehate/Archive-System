@@ -9,13 +9,20 @@ namespace Archive.Application.DTOs
     public class FileDto
     {
         public int Id { get; set; }
-        public string Status { get; set; }
-        public string FileNumber { get; set; }
-        public string FileName { get; set; }
+
+        public string FileNumber { get; set; } = null!;
+        public string FileName { get; set; } = null!;
+
         public DateTime UploadedAt { get; set; }
 
-        public string CategoryName { get; set; }
-        public string UploadedByUsername { get; set; }
+        public DateTime? InputDate { get; set; }
+        public DateTime? ExpireDate { get; set; }
+
+        public string CategoryName { get; set; } = null!;
+        public string UploadedByUsername { get; set; } = null!;
+
         public decimal? Amount { get; set; }
+
+        public string Status { get; set; } = null!;
     }
 }
