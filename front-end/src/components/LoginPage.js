@@ -1,17 +1,48 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import { apiService } from '../services/apiService';
 import './LoginPage.css';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleUsernameChange = (e) => {
     setUsername(e.target.value);
+    setError('');
   };
 
   const handlePasswordChange = (e) => {
     setPassword(e.target.value);
+    setError('');
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!username.trim() || !password.trim()) {
+      setError('Username and password are required');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await apiService.login(username, password);
+      login(response.Token);
+      navigate('/upload');
+    } catch (err) {
+      setError(err.message || 'Login failed. Please try again.');
+      setPassword('');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -19,7 +50,7 @@ export default function LoginPage() {
       <div className="login-wrapper">
         <h1 className="login-title">ARCHIVE PRO</h1>
         
-        <form className="login-form" onSubmit={(e) => e.preventDefault()}>
+        <form className="login-form" onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="username">Username</label>
             <input
@@ -29,6 +60,7 @@ export default function LoginPage() {
               value={username}
               onChange={handleUsernameChange}
               placeholder="Enter your username"
+              disabled={isLoading}
             />
           </div>
 
@@ -41,12 +73,19 @@ export default function LoginPage() {
               value={password}
               onChange={handlePasswordChange}
               placeholder="Enter your password"
+              disabled={isLoading}
             />
           </div>
 
-          <Link to="/upload" className="login-button">
-            Login
-          </Link>
+          {error && <div className="error-message">{error}</div>}
+
+          <button
+            type="submit"
+            className="login-button"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Logging in...' : 'Login'}
+          </button>
         </form>
       </div>
     </div>

@@ -1,16 +1,12 @@
-import { createContext, useState } from 'react';
+import { createContext, useState, useEffect } from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { apiService } from '../services/apiService';
 
 export const CategoryContext = createContext();
 
 export function CategoryProvider({ children }) {
   // Global categories state - shared across UploadPage and AdminPanel (Two-way sync)
-  const [categories, setCategories] = useState([
-    'Official Licenses',
-    'General Insurance Policies',
-    'Car Insurance Policies',
-    'Contracts',
-    'Agreements'
-  ]);
+  const [categories, setCategories] = useState([]);
 
   // SearchPage categories - only adds from UploadPage, never deletes
   const [searchPageCategories, setSearchPageCategories] = useState([
@@ -20,6 +16,25 @@ export function CategoryProvider({ children }) {
     'Contracts',
     'Agreements'
   ]);
+
+  const { token } = useAuth();
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      if (!token) {
+        setCategories([]);
+        return;
+      }
+      try {
+        const data = await apiService.getUserCategories(token);
+        setCategories(data.map(cat => ({ id: cat.id, name: cat.name }))); 
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+        setCategories([]);
+      }
+    };
+    fetchCategories();
+  }, [token]);
 
   // Function to add a new category (used by UploadPage)
   const addCategory = (categoryName) => {

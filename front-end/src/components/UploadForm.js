@@ -1,7 +1,15 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { apiService } from '../services/apiService';
+import { CategoryContext } from '../context/CategoryContext';
+import { useNavigate } from 'react-router-dom';
 import './UploadForm.css';
 
 export default function UploadForm({ selectedCategory }) {
+  const { token } = useAuth();
+  const { categories } = useContext(CategoryContext);
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     fileName: '',
     fileNumber: '',
@@ -44,7 +52,7 @@ export default function UploadForm({ selectedCategory }) {
            formData.selectedFile !== null;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (isFormValid()) {
       const today = new Date();
@@ -62,11 +70,29 @@ export default function UploadForm({ selectedCategory }) {
         return;
       }
 
-      console.log('Form Data:', {
-        category: selectedCategory,
-        ...formData
-      });
-      console.log('File to upload:', formData.selectedFile);
+      try {
+        const category = categories.find(c => c.name === selectedCategory);
+        if (!category) throw new Error('Invalid category');
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', formData.selectedFile);
+        uploadFormData.append('CategoryId', category.id.toString());
+        uploadFormData.append('FileNumber', formData.fileNumber);
+        uploadFormData.append('FileName', formData.fileName);
+        if (formData.inputDate) uploadFormData.append('InputDate', formData.inputDate);
+        if (formData.expireDate) uploadFormData.append('ExpireDate', formData.expireDate);
+        if (formData.amount) uploadFormData.append('Amount', formData.amount.toString());
+        
+        const result = await apiService.uploadFile(uploadFormData, token);
+        alert(`File uploaded successfully`);
+        navigate('/status-file');
+      } catch (error) {
+        console.error('Upload error:', error);
+        if (error.message.includes('401') || error.message.includes('403')) {
+          alert('Access Denied - Check category permissions.');
+        } else {
+          alert(`Upload failed: ${error.message}`);
+        }
+      }
     }
   };
 

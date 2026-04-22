@@ -19,13 +19,13 @@ namespace Archive.Infrastructure.Repositories
             return await _context.Categories.AsNoTracking().ToListAsync(ct);
         }
 
-        //public async Task<List<Category>> GetActiveAsync(CancellationToken ct)
-        //{
-        //    return await _context.Categories
-        //        .Where(x => x.IsActive)
-        //        .OrderBy(x => x.Name)
-        //        .ToListAsync(ct);
-        //}
+        public async Task<List<Category>> GetActiveAsync(CancellationToken ct)
+        {
+           return await _context.Categories
+               .Where(x => x.IsActive)
+               .OrderBy(x => x.Name)
+               .ToListAsync(ct);
+        }
 
         public async Task<Category?> GetByIdAsync(int id, CancellationToken ct)
         {

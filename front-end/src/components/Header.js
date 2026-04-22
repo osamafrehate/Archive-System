@@ -1,11 +1,18 @@
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import './Header.css';
 
 export default function Header() {
   const navigate = useNavigate();
+  const { role } = useAuth();
+  const isAdmin = role === 'Admin';
 
   const handleOpenStatusPage = () => {
     navigate('/status-file');
+  };
+
+  const handleOpenAdminPanel = () => {
+    navigate('/admin');
   };
 
   return (
@@ -28,6 +35,16 @@ export default function Header() {
           >
             Search
           </button>
+
+          {isAdmin && (
+            <button
+              onClick={handleOpenAdminPanel}
+              className="header-button text-button"
+              type="button"
+            >
+              Admin Panel
+            </button>
+          )}
         </div>
       </div>
     </header>

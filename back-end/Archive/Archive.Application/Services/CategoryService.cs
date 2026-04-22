@@ -112,5 +112,16 @@ namespace Archive.Application.Services
         {
             await _repo.ActivateByNameAsync(categoryName, ct);
         }
+        public async Task<List<CategoryDto>> GetActiveCategoriesAsync(CancellationToken ct)
+        {
+            var categories = await _repo.GetActiveAsync(ct);
+
+            return categories.Select(x => new CategoryDto
+            {
+                Id = x.Id,
+                Name = x.Name,
+                IsActive = x.IsActive
+            }).ToList();
+        }
     }
 }

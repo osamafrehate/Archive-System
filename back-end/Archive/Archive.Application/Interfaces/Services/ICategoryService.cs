@@ -19,7 +19,7 @@ namespace Archive.Application.Interfaces.Services
         Task<List<CategoryDto>> GetUserCategoriesAsync(int userId, CancellationToken ct);
        
         Task<List<CategoryDto>> GetUserCategoriesEditPermissionAsync(int userId, CancellationToken ct);
-
+        Task<List<CategoryDto>> GetActiveCategoriesAsync(CancellationToken ct);
         Task ActivateByNameAsync(string categoryName, CancellationToken ct);
     }
 }

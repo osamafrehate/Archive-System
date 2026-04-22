@@ -1,5 +1,7 @@
-import { useState, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { CategoryContext } from '../context/CategoryContext';
+import { useAuth } from '../hooks/useAuth';
+import { apiService } from '../services/apiService';
 import './SearchPage.css';
 import Header from './Header';
 import CategoryDropdown from './CategoryDropdown';
@@ -7,8 +9,8 @@ import StatusFileRow from './StatusFileRow';
 
 export default function SearchPage() {
   // Get categories from global context (read-only for SearchPage)
-  // SearchPage uses searchPageCategories which only grows, never shrinks
   const { searchPageCategories } = useContext(CategoryContext);
+  const { token } = useAuth();
 
   const [searchFilters, setSearchFilters] = useState({
     category: '',
@@ -18,68 +20,34 @@ export default function SearchPage() {
     expireDate: ''
   });
 
-  const mockFiles = [
-    {
-      id: 1,
-      user: 'Ahmed1',
-      originalFilename: 'License_001.pdf',
-      fileNumber: 'LIC-2026-001',
-      inputDate: '2026-03-15',
-      expireDate: '2027-10-15',
-      uploadedAt: '2026-03-15 09:20',
-      documentType: 'Official Licenses',
-      amount: 1500.00
-    },
-    {
-      id: 2,
-      user: 'Mohammad',
-      originalFilename: 'Insurance_Policy_002.pdf',
-      fileNumber: 'INS-2026-002',
-      inputDate: '2026-03-20',
-      expireDate: '2026-08-10',
-      uploadedAt: '2026-03-20 11:05',
-      documentType: 'General Insurance Policies',
-      amount: 2500.50
-    },
-    {
-      id: 3,
-      user: 'Hassan',
-      originalFilename: 'Car_Insurance_003.pdf',
-      fileNumber: 'CAR-2026-003',
-      inputDate: '2026-03-25',
-      expireDate: '2026-04-05',
-      uploadedAt: '2026-03-25 14:13',
-      documentType: 'Car Insurance Policies',
-      amount: 3200.75
-    },
-    {
-      id: 4,
-      user: 'Salem',
-      originalFilename: 'Contract_004.pdf',
-      fileNumber: 'CON-2026-004',
-      inputDate: '2026-03-10',
-      expireDate: '2026-09-01',
-      uploadedAt: '2026-03-10 08:45',
-      documentType: 'Contracts',
-      amount: 5000.00
-    },
-    {
-      id: 5,
-      user: 'Fatima',
-      originalFilename: 'Agreement_005.pdf',
-      fileNumber: 'AGR-2026-005',
-      inputDate: '2026-03-05',
-      expireDate: '2027-03-05',
-      uploadedAt: '2026-03-05 10:30',
-      documentType: 'Agreements',
-      amount: 1800.25
-    }
-  ];
-
+  const [files, setFiles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [filteredFiles, setFilteredFiles] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
 
   const isCategorySelected = !!searchFilters.category;
+
+  useEffect(() => {
+    if (token) {
+      loadFiles();
+    }
+  }, [token]);
+
+  const loadFiles = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await apiService.getFiles(1, token);
+      setFiles(data.items || data.files || data);
+    } catch (err) {
+      console.error('Failed to fetch files:', err);
+      setError(err.message);
+      setFiles([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCategoryChange = (value) => {
     if (value === 'Select a category') {
@@ -128,26 +96,26 @@ export default function SearchPage() {
       return;
     }
 
-    let results = mockFiles.filter(file => file.documentType === filters.category);
+    let results = files.filter(file => (file.documentType || file.categoryName) === filters.category);
 
     if (filters.fileName.trim()) {
       results = results.filter(file =>
-        file.originalFilename.toLowerCase().includes(filters.fileName.toLowerCase())
+        (file.originalFilename || file.fileName).toLowerCase().includes(filters.fileName.toLowerCase())
       );
     }
 
     if (filters.fileNumber.trim()) {
       results = results.filter(file =>
-        file.fileNumber.toLowerCase().includes(filters.fileNumber.toLowerCase())
+        (file.fileNumber || '').toLowerCase().includes(filters.fileNumber.toLowerCase())
       );
     }
 
     if (filters.inputDate) {
-      results = results.filter(file => file.inputDate === filters.inputDate);
+      results = results.filter(file => (file.inputDate || '') === filters.inputDate);
     }
 
     if (filters.expireDate) {
-      results = results.filter(file => file.expireDate === filters.expireDate);
+      results = results.filter(file => (file.expireDate || '') === filters.expireDate);
     }
 
     setFilteredFiles(results);
@@ -158,13 +126,23 @@ export default function SearchPage() {
     if (!checkIfEnableSearch()) {
       setFilteredFiles([]);
       setHasSearched(true);
-      
       return;
     }
-//  console.log('Search submitted with filters:');
     applyFilters(searchFilters);
     setHasSearched(true);
   };
+
+  if (loading) {
+    return (
+      <div className="search-page">
+        <Header />
+        <div className="search-content">
+          <h2 className="search-title">Search Files</h2>
+          <div>Loading files...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="search-page">
@@ -256,7 +234,9 @@ export default function SearchPage() {
 
         <div className="results-section">
           <h3>Search Results ({filteredFiles.length})</h3>
-          {!hasSearched ? (
+          {error ? (
+            <div className="error-message">{error}</div>
+          ) : !hasSearched ? (
             <p>Please select a category and fill at least one field before searching.</p>
           ) : filteredFiles.length === 0 ? (
             <p>No files found matching your criteria.</p>
@@ -288,3 +268,4 @@ export default function SearchPage() {
     </div>
   );
 }
+

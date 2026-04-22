@@ -101,5 +101,13 @@ namespace Archive.API.Controllers
                 Message = "Category activated successfully"
             });
         }
+        [HttpGet("active")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetActiveCategories(CancellationToken ct)
+        {
+            var result = await _service.GetActiveCategoriesAsync(ct);
+
+            return Ok(result);
+        }
     }
 }

@@ -20,21 +20,24 @@ export default function StatusFileRow({ file, showAmount = false }) {
   const status = getStatusColor(file.expireDate);
 
   return (
-    <tr key={file.id}>
-      <td>{file.user}</td>
-      <td>{file.originalFilename}</td>
-      <td>{file.fileNumber}</td>
-      <td>{file.inputDate}</td>
-      <td>{file.expireDate}</td>
-      <td>{file.uploadedAt}</td>
-      <td>{file.documentType}</td>
+    <tr>
+      <td>{file.user || '-'}</td>
+      <td>{file.originalFilename || file.fileName || '-'}</td>
+      <td>{file.fileNumber || '-'}</td>
+      <td>{file.inputDate || '-'}</td>
+      <td>{file.expireDate || '-'}</td>
+      <td>{file.uploadedAt || '-'}</td>
+      <td>{file.documentType || file.categoryName || '-'}</td>
       <td>
         {showAmount ? (
-          file.amount !== undefined ? `$${file.amount.toFixed(2)}` : '-'
+          file.amount !== undefined ? `$${file.amount.toLocaleString()}` : '-'
         ) : (
-          <span className={`status-chip ${status.colorClass}`}>{status.text}</span>
+          <span className={`status-chip ${status.colorClass}`}>
+            {status.text}
+          </span>
         )}
       </td>
     </tr>
   );
 }
+

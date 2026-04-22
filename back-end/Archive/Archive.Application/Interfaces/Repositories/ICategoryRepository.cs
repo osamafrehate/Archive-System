@@ -11,7 +11,7 @@ namespace Archive.Application.Interfaces.Repositories
     {
         Task<List<Category>> GetAllAsync(CancellationToken ct);
 
-        //Task<List<Category>> GetActiveAsync(CancellationToken ct);
+        Task<List<Category>> GetActiveAsync(CancellationToken ct);
 
         Task<Category?> GetByIdAsync(int id, CancellationToken ct);
 

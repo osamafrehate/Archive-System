@@ -78,6 +78,20 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 // =========================
 builder.Services.AddAuthorization();
 
+// =========================
+// CORS Configuration
+// =========================
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:3000", "http://localhost:3001")
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
+    });
+});
+
 var app = builder.Build();
 
 // =========================
@@ -90,6 +104,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors("AllowFrontend");
 
 app.UseAuthentication();   
 app.UseAuthorization();

@@ -107,7 +107,7 @@ export default function UploadPage() {
           <span className="document-type-label">Document Type:</span>
 
           <CategoryDropdown
-            categories={['Select a category', ...categories]}
+            categories={['Select a category', ...categories.map(cat => cat.name || cat)]}
             selectedCategory={selectedCategory || 'Select a category'}
             onCategoryChange={(value) => {
               if (value === 'Select a category') {

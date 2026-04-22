@@ -64,6 +64,23 @@
   box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
 }
 
+.input-field:disabled {
+  background-color: #f0f0f0;
+  cursor: not-allowed;
+  color: #999999;
+}
+
+.error-message {
+  color: #d32f2f;
+  font-size: 13px;
+  padding: 10px 12px;
+  background-color: #ffebee;
+  border-left: 3px solid #d32f2f;
+  border-radius: 3px;
+  margin-top: -10px;
+  font-weight: 500;
+}
+
 .input-field::placeholder {
   color: #999999;
 }
@@ -89,6 +106,12 @@
 .login-button:hover {
   background-color: #45a049;
   transform: translateY(-2px);
+}
+
+.login-button:disabled {
+  background-color: #9ccc9c;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .login-button:active {
