@@ -60,11 +60,29 @@ export const apiService = {
     });
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || `HTTP ${response.status}`); 
+    }
+    const data = await response.json();
+    return data.map(cat => ({ id: cat.id, name: cat.name })); 
+  },
+
+  getUserCategoriesEditPermission: async (token) => {
+    if (!token) throw new Error('No auth token');
+    const response = await fetch(`${API_BASE_URL}/categories/UserCategoriesEditPermission`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
       throw new Error(error.message || `HTTP ${response.status}`);
     }
     const data = await response.json();
     return data.map(cat => ({ id: cat.id, name: cat.name })); 
   },
+
 
   getActiveCategories: async (token) => {
     if (!token) throw new Error('No auth token');
@@ -77,7 +95,7 @@ export const apiService = {
     });
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || `HTTP ${response.status}`);
+      throw new Error(error.message || `HTTP ${response.status}`); 
     }
     const data = await response.json();
     return data.map(cat => ({ id: cat.id, name: cat.name })); 
@@ -94,10 +112,11 @@ export const apiService = {
     });
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || `HTTP ${response.status}`);
+      throw new Error(error.message || `HTTP ${response.status}`); 
     }
     return response.json();
   },
+
 
   searchUsers: async (keyword, token) => {
     if (!token) throw new Error('No auth token');
@@ -158,8 +177,16 @@ export const apiService = {
       body: JSON.stringify({ name })
     });
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || `HTTP ${response.status}`);
+      try {
+        const error = await response.json();
+        throw new Error(error.message || `HTTP ${response.status}`);
+      } catch {
+        throw new Error(`HTTP ${response.status} - Server error`);
+      }
+    }
+    // Back-end may return empty 200, no JSON
+    if (response.headers.get('content-length') === '0' || response.status === 204) {
+      return { id: Date.now(), name }; // Optimistic fallback
     }
     return response.json();
   },
@@ -175,8 +202,16 @@ export const apiService = {
       body: JSON.stringify({ name })
     });
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || `HTTP ${response.status}`);
+      try {
+        const error = await response.json();
+        throw new Error(error.message || `HTTP ${response.status}`);
+      } catch {
+        throw new Error(`HTTP ${response.status} - Server error`);
+      }
+    }
+    // Back-end may return empty 200
+    if (response.headers.get('content-length') === '0' || response.status === 204) {
+      return { id, name }; // Return updated object
     }
     return response.json();
   },
@@ -190,10 +225,15 @@ export const apiService = {
       }
     });
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || `HTTP ${response.status}`);
+      try {
+        const error = await response.json();
+        throw new Error(error.message || `HTTP ${response.status}`);
+      } catch {
+        throw new Error(`HTTP ${response.status}`);
+      }
     }
-    return response.json();
+    // DELETE typically returns 204 No Content - no JSON needed
+    return { success: true };
   },
 
   assignUserCategoryPermission: async (data, token) => {
@@ -205,6 +245,36 @@ export const apiService = {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(data)
+    });
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}`;
+      try {
+        const errorText = await response.text();
+        console.error('Assign error response:', errorText);
+        try {
+          const error = JSON.parse(errorText);
+          errorMessage = error.message || errorText;
+        } catch {
+          errorMessage = errorText.trim() || errorMessage;
+        }
+      } catch {
+        // Ignore
+      }
+      throw new Error(errorMessage);
+    }
+    // May return plain text "Permissions updated successfully"
+    const text = await response.text();
+    return { success: true, message: text };
+  },
+
+  getFiles: async (page = 1, token) => {
+    if (!token) throw new Error('No auth token');
+    const response = await fetch(`${API_BASE_URL}/files?page=${page}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
     });
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
@@ -229,3 +299,4 @@ export const apiService = {
     return response.json();
   }
 };
+

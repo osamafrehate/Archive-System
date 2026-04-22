@@ -1,4 +1,6 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { apiService } from '../services/apiService';
 import { CategoryContext } from '../context/CategoryContext';
 import './UploadPage.css';
 import Header from './Header';
@@ -6,11 +8,30 @@ import CategoryDropdown from './CategoryDropdown';
 import UploadForm from './UploadForm';
 
 
+
 export default function UploadPage() {
   // Get categories from global context
   const { categories, setCategories, syncWithSearchPage } = useContext(CategoryContext);
+  const { token } = useAuth();
+  
+  const [editCategories, setEditCategories] = useState([]);
+
+  useEffect(() => {
+    if (token) {
+      apiService.getUserCategoriesEditPermission(token)
+        .then(setEditCategories)
+        .catch(error => {
+          console.error('Failed to fetch edit categories:', error);
+          setEditCategories([]);
+        });
+    } else {
+      setEditCategories([]);
+    }
+  }, [token]);
 
   const [selectedCategory, setSelectedCategory] = useState('');
+
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [tempCategories, setTempCategories] = useState([]);
   const [originalCategories, setOriginalCategories] = useState([]);
@@ -19,13 +40,24 @@ export default function UploadPage() {
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [pendingDeleteIndex, setPendingDeleteIndex] = useState(null);
 
-  const handleOpenPopup = () => {
-    // Save original categories to track new additions
-    setOriginalCategories([...categories]);
-    setTempCategories([...categories]);
-    setHasChanges(false);
-    setIsModalOpen(true);
+  const handleOpenPopup = async () => {
+    try {
+      const editableCats = await apiService.getUserCategoriesEditPermission(token);
+      const editableNames = editableCats.map(cat => cat.name);
+      setTempCategories(editableNames);
+      setOriginalCategories(editableNames);
+      setHasChanges(false);
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error('Failed to load editable categories:', error);
+      // Fallback to context categories
+      setOriginalCategories([...categories]);
+      setTempCategories([...categories]);
+      setHasChanges(false);
+      setIsModalOpen(true);
+    }
   };
+
 
   const handleClosePopup = () => {
     setIsModalOpen(false);
@@ -118,9 +150,12 @@ export default function UploadPage() {
             }}
           />
 
-          <button className="manage-button" onClick={handleOpenPopup}>
-            Manage Categories
-          </button>
+          {editCategories.length > 0 && (
+            <button className="manage-button" onClick={handleOpenPopup}>
+              Manage Categories
+            </button>
+          )}
+
         </div>
 
         <UploadForm selectedCategory={selectedCategory} />

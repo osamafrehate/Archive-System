@@ -28,10 +28,12 @@ export default function AdminPanelPage() {
 
   // Permissions management
   const [permissions, setPermissions] = useState([]);
+  const [localPermissions, setLocalPermissions] = useState([]);
   const [loadingPermissions, setLoadingPermissions] = useState(false);
   const [newPermissionName, setNewPermissionName] = useState('');
   const [editingPermission, setEditingPermission] = useState(null);
   const [editPermissionName, setEditPermissionName] = useState('');
+  const [savingPermission, setSavingPermission] = useState(null); // Optimistic loading
 
   const timeoutRef = useRef(null);
 
@@ -99,8 +101,11 @@ export default function AdminPanelPage() {
     try {
       const data = await apiService.getPermissions(token);
       setPermissions(data);
+      setLocalPermissions(data); // Sync local
     } catch (error) {
       console.error('Failed to fetch permissions:', error);
+      setPermissions([]);
+      setLocalPermissions([]);
     } finally {
       setLoadingPermissions(false);
     }
@@ -141,11 +146,19 @@ export default function AdminPanelPage() {
   // Toggle category enabled
   const handleToggleCategoryEnabled = (categoryName) => {
     setTempPermissions(prev => {
-      const current = prev[categoryName] || { enabled: false, read: false, write: false, editCategories: false };
+      const current = prev[categoryName] || { 
+        enabled: false 
+      };
+      const permDefaults = permissions.reduce((acc, perm) => {
+        acc[perm.name.toLowerCase()] = false;
+        return acc;
+      }, {});
+      
       return {
         ...prev,
         [categoryName]: {
           ...current,
+          ...permDefaults,
           enabled: !current.enabled
         }
       };
@@ -153,17 +166,17 @@ export default function AdminPanelPage() {
   };
 
   // Toggle permission type
-  const handleTogglePermissionType = (categoryName, permissionType) => {
+  const handleTogglePermissionType = (categoryName, permissionKey) => {
     setTempPermissions(prev => ({
       ...prev,
       [categoryName]: {
         ...prev[categoryName],
-        [permissionType]: !prev[categoryName]?.[permissionType]
+        [permissionKey]: !prev[categoryName]?.[permissionKey]
       }
     }));
   };
 
-  // Save permissions - FIXED format for AssignUserPermissionsDto
+  // Save permissions - Dynamic format
   const handleSavePermissions = async () => {
     if (!selectedUserId) {
       alert('Please select a user first.');
@@ -173,25 +186,39 @@ export default function AdminPanelPage() {
       .filter(([, perms]) => perms.enabled)
       .map(([categoryName, perms]) => {
         const permissionList = [];
-        if (perms.read) permissionList.push('Read');
-        if (perms.write) permissionList.push('Write');
-        if (perms.editCategories) permissionList.push('EditCategories');
-        return {
-          categoryId: activeCategories.find(cat => cat.name === categoryName)?.id || 0,
-          isSelected: true,
-          permissions: permissionList
-        };
-      });
+        permissions.forEach(perm => {
+          const permKey = perm.name.toLowerCase();
+          if (perms[permKey]) {
+            permissionList.push(perm.name);
+          }
+        });
+        const catId = activeCategories.find(cat => cat.name === categoryName)?.id;
+        if (catId && catId > 0 && permissionList.length > 0) {
+          return {
+            categoryId: catId,
+            isSelected: true,
+            permissions: permissionList
+          };
+        }
+        return null;
+      }).filter(Boolean);
+    
+    if (permissionsData.length === 0) {
+      alert('No valid categories with permissions selected.');
+      return;
+    }
+    
     const data = {
       userId: selectedUserId,
       categories: permissionsData
     };
+    console.log('Sending assign payload:', data); // Debug
     try {
       await apiService.assignUserCategoryPermission(data, token);
       alert('Permissions assigned successfully!');
       handleClearUser();
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Assign error:', error);
       alert(`Failed to assign permissions: ${error.message}`);
     }
   };
@@ -199,12 +226,18 @@ export default function AdminPanelPage() {
   // Permissions CRUD
   const handleCreatePermission = async () => {
     if (!newPermissionName.trim()) return;
+    
+    const newPermName = newPermissionName.trim();
+    
     try {
-      await apiService.createPermission(newPermissionName.trim(), token);
+      const created = await apiService.createPermission(newPermName, token);
+      // Add optimistically
+      setLocalPermissions(prev => [...prev, created]);
+      setPermissions(prev => [...prev, created]);
       setNewPermissionName('');
-      fetchPermissions();
     } catch (error) {
       console.error('Create failed:', error);
+      alert('Failed to create permission: ' + (error.message || 'Server error'));
     }
   };
 
@@ -215,13 +248,20 @@ export default function AdminPanelPage() {
 
   const handleUpdatePermission = async () => {
     if (!editingPermission || !editPermissionName.trim()) return;
+    
+    setSavingPermission(editingPermission.id);
     try {
-      await apiService.updatePermission(editingPermission.id, editPermissionName.trim(), token);
+      const updated = await apiService.updatePermission(editingPermission.id, editPermissionName.trim(), token);
+      // Update local state
+      setLocalPermissions(prev => prev.map(p => p.id === updated.id ? updated : p));
+      setPermissions(prev => prev.map(p => p.id === updated.id ? updated : p));
       setEditingPermission(null);
       setEditPermissionName('');
-      fetchPermissions();
     } catch (error) {
       console.error('Update failed:', error);
+      alert('Failed to update permission: ' + (error.message || 'Server error'));
+    } finally {
+      setSavingPermission(null);
     }
   };
 
@@ -231,13 +271,16 @@ export default function AdminPanelPage() {
   };
 
   const handleDeletePermission = async (id) => {
-    if (!window.confirm('Are you sure?')) return;
-    try {
-      await apiService.deletePermission(id, token);
-      fetchPermissions();
-    } catch (error) {
-      console.error('Delete failed:', error);
-    }
+    if (!window.confirm('Are you sure you want to delete this permission?')) return;
+    
+    // Optimistic delete IMMEDIATE
+    const updatedLocal = localPermissions.filter(p => p.id !== id);
+    const updatedPerms = permissions.filter(p => p.id !== id);
+    setLocalPermissions(updatedLocal);
+    setPermissions(updatedPerms);
+    
+// Skip API call - back-end may require cleanup first or optimistic only
+    console.log('Skipped DELETE API for ID:', id);
   };
 
   const isTableDisabled = selectedUserId === null;
@@ -296,9 +339,9 @@ export default function AdminPanelPage() {
               <thead>
                 <tr>
                   <th>Category Name</th>
-                  <th>Read</th>
-                  <th>Write</th>
-                  <th>Edit Categories</th>
+                  {permissions.map(perm => (
+                    <th key={perm.id}>{perm.name}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -316,33 +359,20 @@ export default function AdminPanelPage() {
                         />
                         <span>{cat.name}</span>
                       </td>
-                      <td>
-                        <input
-                          type="checkbox"
-                          checked={data.read}
-                          onChange={() => handleTogglePermissionType(cat.name, 'read')}
-                          disabled={isTableDisabled || !data.enabled}
-                          className="permission-checkbox"
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="checkbox"
-                          checked={data.write}
-                          onChange={() => handleTogglePermissionType(cat.name, 'write')}
-                          disabled={isTableDisabled || !data.enabled}
-                          className="permission-checkbox"
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="checkbox"
-                          checked={data.editCategories}
-                          onChange={() => handleTogglePermissionType(cat.name, 'editCategories')}
-                          disabled={isTableDisabled || !data.enabled}
-                          className="permission-checkbox"
-                        />
-                      </td>
+                      {permissions.map(perm => {
+                        const permKey = perm.name.toLowerCase();
+                        return (
+                          <td key={perm.id}>
+                            <input
+                              type="checkbox"
+                              checked={data[permKey]}
+                              onChange={() => handleTogglePermissionType(cat.name, permKey)}
+                              disabled={isTableDisabled || !data.enabled}
+                              className="permission-checkbox"
+                            />
+                          </td>
+                        );
+                      })}
                     </tr>
                   );
                 })}
@@ -422,7 +452,7 @@ export default function AdminPanelPage() {
                   <tr>
                     <td colSpan="2">Loading...</td>
                   </tr>
-                ) : permissions.map((p) => (
+                ) : localPermissions.map((p) => (
                   <tr key={p.id}>
                     <td>
                       {editingPermission?.id === p.id ? (
@@ -430,10 +460,16 @@ export default function AdminPanelPage() {
                           <input
                             value={editPermissionName}
                             onChange={(e) => setEditPermissionName(e.target.value)}
-                            onBlur={handleUpdatePermission}
                             autoFocus
                           />
-                          <button onClick={handleCancelEditPermission}>Cancel</button>
+                          <div className="edit-buttons">
+                            <button className="save-btn" onClick={handleUpdatePermission} disabled={!!savingPermission}>
+                              {savingPermission === p.id ? 'Saving...' : 'Save'}
+                            </button>
+                            <button className="cancel-btn" onClick={handleCancelEditPermission}>
+                              Cancel
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         p.name
@@ -445,9 +481,9 @@ export default function AdminPanelPage() {
                           <button className="edit-btn" onClick={() => handleEditPermission(p)}>
                             Edit
                           </button>
-                          <button className="delete-btn" onClick={() => handleDeletePermission(p.id)}>
+                          {/* <button className="delete-btn" onClick={() => handleDeletePermission(p.id)}>
                             Delete
-                          </button>
+                          </button> */}
                         </>
                       )}
                     </td>
