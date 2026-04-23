@@ -119,9 +119,9 @@ export default function StatusFileRow({ file: propFile, showAmount = false, onFi
                 autoFocus
                 disabled={isRenaming}
               />
-              <button onClick={handleRename} disabled={isRenaming || !editName.trim()}>
+              {/* <button onClick={handleRename} disabled={isRenaming || !editName.trim()}>
                 {isRenaming ? 'Saving...' : 'Save'}
-              </button>
+              </button> */}
               <button onClick={handleCancel} disabled={isRenaming}>
                 Cancel
               </button>
