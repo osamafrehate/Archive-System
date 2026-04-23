@@ -108,5 +108,55 @@ namespace Archive.Application.Services
                  : days <= 180 ? "YELLOW"
                  : "GREEN";
         }
+        public async Task<DownloadFileDto?> GetFileForDownloadAsync(
+    int fileId,
+    int userId,
+    CancellationToken ct)
+        {
+            var file = await _repo.GetByIdAsync(fileId, ct);
+
+            if (file == null)
+                return null;
+
+            var hasPermission = await _permissionService.HasPermissionAsync(
+                userId,
+                file.CategoryId,
+                "READ");
+
+            if (!hasPermission)
+                throw new Exception("No permission");
+
+            if (string.IsNullOrWhiteSpace(file.FilePath))
+                throw new Exception("File path missing");
+
+            return new DownloadFileDto
+            {
+                FilePath = file.FilePath,
+                FileName = file.FileName
+            };
+        }
+        public async Task UpdateFileNameAsync(
+    int fileId,
+    int userId,
+    string newFileName,
+    CancellationToken ct)
+        {
+            var file = await _repo.GetByIdAsync(fileId, ct);
+
+            if (file == null)
+                throw new Exception("File not found");
+
+            var hasPermission = await _permissionService.HasPermissionAsync(
+                userId,
+                file.CategoryId,
+                "WRITE");
+
+            if (!hasPermission)
+                throw new Exception("No permission");
+
+            file.UpdateFileName(newFileName); // 👈 Domain behavior
+
+            await _repo.SaveChangesAsync(ct);
+        }
     }
 }

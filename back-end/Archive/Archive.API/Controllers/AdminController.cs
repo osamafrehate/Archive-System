@@ -1,5 +1,6 @@
 ﻿using Archive.Application.DTOs;
 using Archive.Application.Interfaces.Services;
+using Archive.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -25,6 +26,14 @@ namespace Archive.API.Controllers
             await _adminService.AssignPermissionsAsync(dto, ct);
 
             return Ok("Permissions updated successfully");
+        }
+        [HttpGet("users/{userId}/category-permissions")]
+        public async Task<IActionResult> GetUserCategoryPermissions(
+           int userId,
+           CancellationToken ct)
+        {
+            var result = await _adminService.GetUserCategoryPermissionsAsync(userId, ct);
+            return Ok(result);
         }
     }
 }

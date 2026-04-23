@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth';
 import { apiService } from '../services/apiService';
 import Header from './Header';
 import StatusFileRow from './StatusFileRow';
+import { exportToExcel } from '../utils/excelExportUtils';
 import './StatusFilePage.css';
 
 export default function StatusFilePage() {
@@ -73,6 +74,16 @@ export default function StatusFilePage() {
 
   };
 
+  const handleExport = () => {
+    if (files.length === 0) {
+      alert('No files to export');
+      return;
+    }
+    
+    const timestamp = new Date().toISOString().split('T')[0];
+    exportToExcel(files, `Files_${timestamp}.csv`);
+  };
+
   if (loading) {
 
     return (
@@ -117,8 +128,10 @@ export default function StatusFilePage() {
                 <StatusFileRow
                   key={file.id}
                   file={{
+                    id: file.id,
                     user: file.uploadedByUsername,
                     originalFilename: file.fileName,
+                    fileName: file.fileName,
                     fileNumber: file.fileNumber,
                     inputDate: file.inputDate,
                     expireDate: file.expireDate,
@@ -167,6 +180,17 @@ export default function StatusFilePage() {
 
           </div>
 
+        </div>
+
+        <div className="export-section">
+          <button
+            className="export-btn"
+            onClick={handleExport}
+            disabled={files.length === 0 || loading}
+            title="Export current page files to Excel"
+          >
+            📊 Export to Excel
+          </button>
         </div>
 
       </div>

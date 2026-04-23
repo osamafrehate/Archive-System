@@ -84,14 +84,17 @@ namespace Archive.Application.Services
     public class AdminService : IAdminService
     {
         private readonly IUserCategoryPermissionRepository _repo;
+        private readonly IUserRepository _userRepo;
         private readonly IPermissionRepository _permissionRepo;
 
         public AdminService(
             IUserCategoryPermissionRepository repo,
-            IPermissionRepository permissionRepo)
+            IPermissionRepository permissionRepo,
+            IUserRepository userRepo)
         {
             _repo = repo;
             _permissionRepo = permissionRepo;
+            _userRepo = userRepo;
         }
 
         public async Task AssignPermissionsAsync(
@@ -143,6 +146,31 @@ namespace Archive.Application.Services
 
                 await _repo.SaveChangesAsync(ct);
             }
+        }
+        public async Task<UserCategoryPermissionsDto> GetUserCategoryPermissionsAsync(
+           int userId,
+           CancellationToken ct)
+        {
+            var data = await _userRepo.GetUserCategoryPermissionsAsync(userId, ct);
+
+            var result = data
+                .GroupBy(x => new { x.CategoryId, x.Category.Name })
+                .Select(g => new CategoryPermissionsDto
+                {
+                    CategoryId = g.Key.CategoryId,
+                    CategoryName = g.Key.Name,
+                    Permissions = g.ToDictionary(
+                        x => x.Permission.Name,
+                        x => true
+                    )
+                })
+                .ToList();
+
+            return new UserCategoryPermissionsDto
+            {
+                UserId = userId,
+                Categories = result
+            };
         }
     }
 }

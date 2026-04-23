@@ -126,12 +126,71 @@ export default function AdminPanelPage() {
   };
 
   // Select user
-  const handleSelectUser = (id, username) => {
+  const handleSelectUser = async (id, username) => {
     setSelectedUserId(id);
     setSelectedUserName(username);
     setSearchInput(username);
     setIsDropdownOpen(false);
-    setTempPermissions({});
+    
+    // Fetch existing permissions for this user
+    try {
+      const response = await apiService.getUserCategoryPermissions(id, token);
+      
+      // Build tempPermissions state from the response
+      const permissionsMap = {};
+      
+      if (response.categories && Array.isArray(response.categories)) {
+        response.categories.forEach(cat => {
+          // Initialize category with enabled state based on whether it has any permissions
+          const hasPermissions = cat.permissions && Object.values(cat.permissions).some(v => v === true);
+          permissionsMap[cat.categoryName] = {
+            enabled: hasPermissions
+          };
+          
+          // Map each permission from the backend dictionary
+          if (cat.permissions && typeof cat.permissions === 'object') {
+            Object.entries(cat.permissions).forEach(([permName, isAssigned]) => {
+              const permKey = permName.toLowerCase();
+              permissionsMap[cat.categoryName][permKey] = isAssigned;
+            });
+          }
+        });
+      }
+      
+      // Ensure all active categories are in the map
+      activeCategories.forEach(cat => {
+        if (!permissionsMap[cat.name]) {
+          permissionsMap[cat.name] = { enabled: false };
+          // Initialize all permission keys to false
+          permissions.forEach(perm => {
+            const permKey = perm.name.toLowerCase();
+            permissionsMap[cat.name][permKey] = false;
+          });
+        } else {
+          // Fill in missing permission keys
+          permissions.forEach(perm => {
+            const permKey = perm.name.toLowerCase();
+            if (!(permKey in permissionsMap[cat.name])) {
+              permissionsMap[cat.name][permKey] = false;
+            }
+          });
+        }
+      });
+      
+      setTempPermissions(permissionsMap);
+    } catch (error) {
+      console.error('Failed to fetch user permissions:', error);
+      // Initialize empty permissions if fetch fails
+      const emptyMap = {};
+      activeCategories.forEach(cat => {
+        emptyMap[cat.name] = { enabled: false };
+        permissions.forEach(perm => {
+          const permKey = perm.name.toLowerCase();
+          emptyMap[cat.name][permKey] = false;
+        });
+      });
+      setTempPermissions(emptyMap);
+    }
   };
 
   const handleClearUser = () => {

@@ -54,5 +54,15 @@ namespace Archive.Infrastructure.Repositories
             await _context.Files.AddAsync(file, ct);
             await _context.SaveChangesAsync(ct);
         }
+        public async Task<FileArchive?> GetByIdAsync(int id, CancellationToken ct)
+        {
+            return await _context.Files
+                .Include(f => f.Category)
+                .FirstOrDefaultAsync(f => f.Id == id, ct);
+        }
+        public async Task SaveChangesAsync(CancellationToken ct)
+        {
+            await _context.SaveChangesAsync(ct);
+        }
     }
 }

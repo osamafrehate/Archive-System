@@ -1,7 +1,9 @@
 ﻿using Archive.Application.DTOs;
 using Archive.Application.Interfaces.Services;
+using Archive.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
 using System.Security.Claims;
 
 namespace ArchiveSystem.API.Controllers;
@@ -55,6 +57,71 @@ public class FilesController : ControllerBase
         {
             FileId = fileId,
             Message = "File uploaded successfully"
+        });
+    }
+    [HttpGet("download/{id}")]
+    public async Task<IActionResult> Download(
+    int id,
+    CancellationToken ct)
+    {
+        var userId = int.Parse(
+            User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        var file = await _service.GetFileForDownloadAsync(id, userId, ct);
+
+        if (file == null)
+            return NotFound();
+
+        if (!System.IO.File.Exists(file.FilePath))
+            return NotFound("File not found");
+
+        var provider = new FileExtensionContentTypeProvider();
+
+        if (!provider.TryGetContentType(file.FilePath, out var contentType))
+            contentType = "application/octet-stream";
+
+        return PhysicalFile(
+            file.FilePath,
+            contentType,
+            file.FileName);
+    }
+    [HttpGet("preview/{id}")]
+    public async Task<IActionResult> Preview(int id, CancellationToken ct)
+    {
+        var userId = int.Parse(
+            User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        var file = await _service.GetFileForDownloadAsync(id, userId, ct);
+
+        if (file == null)
+            return NotFound();
+
+        if (!System.IO.File.Exists(file.FilePath))
+            return NotFound("File not found");
+
+        var provider = new FileExtensionContentTypeProvider();
+
+        if (!provider.TryGetContentType(file.FilePath, out var contentType))
+            contentType = "application/octet-stream";
+
+        Response.Headers["Content-Disposition"] = "inline";
+
+        return PhysicalFile(file.FilePath, contentType);
+    }
+    [HttpPut("{id}/rename")]
+    public async Task<IActionResult> Rename(
+    int id,
+    [FromBody] RenameFileDto dto,
+    CancellationToken ct)
+    {
+        var userId = int.Parse(
+            User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        await _service.UpdateFileNameAsync(id, userId, dto.FileName, ct);
+
+        return Ok(new
+        {
+            Message = "File renamed successfully"
         });
     }
 }

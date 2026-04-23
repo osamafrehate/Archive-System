@@ -20,5 +20,7 @@ namespace Archive.Application.Interfaces.Services
            string extension,
            int userId,
            CancellationToken ct);
+        Task<DownloadFileDto?> GetFileForDownloadAsync(int fileId, int userId, CancellationToken ct);
+        Task UpdateFileNameAsync(int fileId, int userId, string newFileName, CancellationToken ct);
     }
 }

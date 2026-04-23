@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://localhost:7238/api';
+export const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://localhost:7238/api';
 
 export const apiService = {
   login: async (username, password) => {
@@ -83,7 +83,6 @@ export const apiService = {
     return data.map(cat => ({ id: cat.id, name: cat.name })); 
   },
 
-
   getActiveCategories: async (token) => {
     if (!token) throw new Error('No auth token');
     const response = await fetch(`${API_BASE_URL}/categories/active`, {
@@ -116,7 +115,6 @@ export const apiService = {
     }
     return response.json();
   },
-
 
   searchUsers: async (keyword, token) => {
     if (!token) throw new Error('No auth token');
@@ -267,6 +265,22 @@ export const apiService = {
     return { success: true, message: text };
   },
 
+  getUserCategoryPermissions: async (userId, token) => {
+    if (!token) throw new Error('No auth token');
+    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/category-permissions`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || `HTTP ${response.status}`);
+    }
+    return response.json();
+  },
+
   getFiles: async (page = 1, token) => {
     if (!token) throw new Error('No auth token');
     const response = await fetch(`${API_BASE_URL}/files?page=${page}`, {
@@ -291,6 +305,52 @@ export const apiService = {
         'Authorization': `Bearer ${token}`
       },
       body: formData
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || `HTTP ${response.status}`);
+    }
+    return response.json();
+  },
+
+  previewFile: async (fileId, token) => {
+    if (!token) throw new Error('No auth token');
+    const response = await fetch(`${API_BASE_URL}/files/preview/${fileId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch preview: HTTP ${response.status}`);
+    }
+    return response;
+  },
+
+  downloadFile: async (fileId, token) => {
+    if (!token) throw new Error('No auth token');
+    const response = await fetch(`${API_BASE_URL}/files/download/${fileId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to download file: HTTP ${response.status}`);
+    }
+    return response;
+  },
+
+  renameFile: async (fileId, newName, token) => {
+    if (!token) throw new Error('No auth token');
+    if (!newName?.trim()) throw new Error('File name cannot be empty');
+    const response = await fetch(`${API_BASE_URL}/files/${fileId}/rename`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ fileName: newName.trim() })
     });
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));

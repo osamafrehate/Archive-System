@@ -10,5 +10,9 @@ namespace Archive.Application.Interfaces.Services
      public interface IAdminService
     {
         Task AssignPermissionsAsync(AssignUserPermissionsDto dto,CancellationToken ct);
-    }
+         Task<UserCategoryPermissionsDto> GetUserCategoryPermissionsAsync(
+         int userId,
+         CancellationToken ct);
+        
+        }
 }

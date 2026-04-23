@@ -55,5 +55,15 @@ namespace Archive.Infrastructure.Repositories
             .Where(x => EF.Functions.Like(x.Username, $"%{keyword}%"))
             .ToListAsync(ct);
         }
+        public async Task<List<UserCategoryPermission>> GetUserCategoryPermissionsAsync(
+            int userId,
+            CancellationToken ct)
+        {
+            return await _context.UserCategoryPermissions
+                .Include(x => x.Category)
+                .Include(x => x.Permission)
+                .Where(x => x.UserId == userId)
+                .ToListAsync(ct);
+        }
     }
 }

@@ -65,5 +65,12 @@ namespace Archive.Domain.Entities
 
             UploadedAt = DateTime.UtcNow; 
         }
+        public void UpdateFileName(string newFileName)
+        {
+            if (string.IsNullOrWhiteSpace(newFileName))
+                throw new ArgumentException("File name cannot be empty");
+
+            FileName = newFileName;
+        }
     }
 }
