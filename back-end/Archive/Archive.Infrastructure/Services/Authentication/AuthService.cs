@@ -1,7 +1,11 @@
-﻿using Archive.Application.Interfaces.Authentication;
+﻿using Archive.Application.DTOs;
+using Archive.Application.Interfaces.Authentication;
 using Archive.Application.Interfaces.Caching;
 using Archive.Application.Interfaces.Repositories;
 using Archive.Domain.Entities;
+using Archive.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace Archive.Infrastructure.Services.Authentication
 {
@@ -10,21 +14,24 @@ namespace Archive.Infrastructure.Services.Authentication
         private readonly IUserRepository _userRepo;
         private readonly IPasswordHasher _hasher;
         private readonly IJwtTokenService _jwt;
-        //private readonly IRedisService _redis;
+        private readonly ArchiveDbContext _context;
+        private readonly IConfiguration _config;
 
         public AuthService(
             IUserRepository userRepo,
             IPasswordHasher hasher,
-            IJwtTokenService jwt
-            )
+            IJwtTokenService jwt,
+            ArchiveDbContext context,
+            IConfiguration config)
         {
             _userRepo = userRepo;
             _hasher = hasher;
             _jwt = jwt;
-            //_redis = redis;
+            _context = context;
+            _config = config;
         }
 
-        public async Task<string> LoginAsync(string username, string password, CancellationToken ct)
+        public async Task<AuthResponse> LoginAsync(string username, string password, CancellationToken ct)
         {
             var user = await _userRepo.GetByUsernameAsync(username, ct);
 
@@ -34,21 +41,26 @@ namespace Archive.Infrastructure.Services.Authentication
             if (!_hasher.Verify(password, user.PasswordHash))
                 throw new Exception("Invalid credentials");
 
+            var accessToken = _jwt.GenerateToken(user.Id, user.Username, user.Role);
+            var refreshTokenValue = _jwt.CreateRefreshToken();
 
-            var token = _jwt.GenerateToken(user.Id, user.Username, user.Role);
+            var refreshToken = new RefreshToken
+            {
+                Token = refreshTokenValue,
+                ExpiresAt = DateTime.UtcNow.AddHours(int.Parse(_config["Jwt:RefreshTokenHours"]!)),
+                UserId = user.Id
+            };
 
+            await _context.RefreshTokens.AddAsync(refreshToken, ct);
+            await _context.SaveChangesAsync(ct);
 
-            //var permissions = await _userRepo.GetUserPermissionsAsync(user.Id, ct);
-
-            //var dict = permissions.ToDictionary(
-            //    x => $"{x.CategoryId}:{x.Permission.Name}",
-            //    x => "1"
-            //);
-
-            //await _redis.SetHashAsync($"user:{user.Id}:permissions", dict);
-
-            return token;
+            return new AuthResponse
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshTokenValue
+            };
         }
+
         public async Task<string> RegisterAsync(string username, string password, CancellationToken ct)
         {
             var existing = await _userRepo.GetByUsernameAsync(username, ct);
@@ -64,5 +76,36 @@ namespace Archive.Infrastructure.Services.Authentication
 
             return "User created successfully";
         }
+
+        public async Task<AuthResponse?> RefreshAsync(string refreshToken, CancellationToken ct)
+        {
+            var storedToken = await _context.RefreshTokens
+                .Include(rt => rt.User)
+                .FirstOrDefaultAsync(rt => rt.Token == refreshToken, ct);
+
+            if (storedToken == null || storedToken.IsRevoked || storedToken.ExpiresAt < DateTime.UtcNow)
+                return null;
+
+            var newAccessToken = _jwt.GenerateToken(storedToken.User.Id, storedToken.User.Username, storedToken.User.Role);
+
+            return new AuthResponse
+            {
+                AccessToken = newAccessToken,
+                RefreshToken = storedToken.Token
+            };
+        }
+
+        public async Task LogoutAsync(string refreshToken, CancellationToken ct)
+        {
+            var token = await _context.RefreshTokens
+                .FirstOrDefaultAsync(rt => rt.Token == refreshToken, ct);
+
+            if (token != null)
+            {
+                token.IsRevoked = true;
+                await _context.SaveChangesAsync(ct);
+            }
+        }
     }
 }
+

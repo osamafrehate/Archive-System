@@ -8,6 +8,7 @@ namespace Archive.Application.Interfaces.Authentication
 {
     public interface IJwtTokenService
     {
-        string GenerateToken(int userId, string username,string role);
+        string GenerateToken(int userId, string username, string role);
+        string CreateRefreshToken();
     }
 }

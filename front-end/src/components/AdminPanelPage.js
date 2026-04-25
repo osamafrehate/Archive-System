@@ -262,10 +262,10 @@ export default function AdminPanelPage() {
         return null;
       }).filter(Boolean);
     
-    if (permissionsData.length === 0) {
-      alert('No valid categories with permissions selected.');
-      return;
-    }
+    // if (permissionsData.length === 0) {
+    //   alert('You delete All Categories');
+    //   return ;
+    // }
     
     const data = {
       userId: selectedUserId,

@@ -29,12 +29,20 @@ namespace Archive.Application.Services
         public async Task<List<FileDto>> GetAllAsync(
             int userId,
             int page,
-            CancellationToken ct)
+            int? categoryId = null,
+            string? fileNumber = null,
+            string? year = null,
+            string? status = null,
+            CancellationToken ct = default)
         {
             var files = await _repo.GetPagedAsync(
                 userId,
                 page,
                 PageSize,
+                categoryId,
+                fileNumber,
+                year,
+                status,
                 ct);
 
             return files.Select(file => new FileDto
@@ -154,7 +162,7 @@ namespace Archive.Application.Services
             if (!hasPermission)
                 throw new Exception("No permission");
 
-            file.UpdateFileName(newFileName); // 👈 Domain behavior
+            file.UpdateFileName(newFileName); 
 
             await _repo.SaveChangesAsync(ct);
         }

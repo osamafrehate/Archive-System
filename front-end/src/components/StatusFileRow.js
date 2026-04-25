@@ -18,7 +18,7 @@ function getStatusColor(expireDateString) {
     return { colorClass: 'status-yellow', text: `${days} days` };
   }
 
-  return { colorClass: 'status-blue', text: `${days} days` };
+  return { colorClass: 'status-green', text: `${days} days` };
 }
 
 export default function StatusFileRow({ file: propFile, showAmount = false, onFileRename }) {

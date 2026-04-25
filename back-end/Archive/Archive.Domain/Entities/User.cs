@@ -15,6 +15,7 @@ namespace Archive.Domain.Entities
 
         public string Role { get; private set; } = null!;
 
+        public ICollection<RefreshToken> RefreshTokens { get; private set; } = new List<RefreshToken>();
         public ICollection<UserCategoryPermission> UserCategoryPermissions { get; private set; } = new List<UserCategoryPermission>();
         public ICollection<FileArchive> UploadedFiles { get; private set; } = new List<FileArchive>();
 

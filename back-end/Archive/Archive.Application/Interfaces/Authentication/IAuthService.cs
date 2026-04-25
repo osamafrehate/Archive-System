@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Archive.Application.DTOs;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,7 +9,9 @@ namespace Archive.Application.Interfaces.Authentication
 {
     public interface IAuthService
     {
-        Task<string> LoginAsync(string username, string password, CancellationToken ct);
+        Task<AuthResponse> LoginAsync(string username, string password, CancellationToken ct);
         Task<string> RegisterAsync(string username, string password, CancellationToken ct);
+        Task<AuthResponse?> RefreshAsync(string refreshToken, CancellationToken ct);
+        Task LogoutAsync(string refreshToken, CancellationToken ct);
     }
 }

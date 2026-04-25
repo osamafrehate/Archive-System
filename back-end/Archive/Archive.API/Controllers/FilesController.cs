@@ -23,12 +23,23 @@ public class FilesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll(
         [FromQuery] int page = 1,
+        [FromQuery] int? categoryId = null,
+        [FromQuery] string? fileNumber = null,
+        [FromQuery] string? year = null,
+        [FromQuery] string? status = null,
         CancellationToken ct = default)
     {
         var userId = int.Parse(
             User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        var result = await _service.GetAllAsync(userId, page, ct);
+        var result = await _service.GetAllAsync(
+            userId,
+            page,
+            categoryId,
+            fileNumber,
+            year,
+            status,
+            ct);
 
         return Ok(result);
     }

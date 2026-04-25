@@ -1,4 +1,71 @@
-export const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://localhost:7238/api';
+export const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5069/api';
+
+const getAccessToken = () => localStorage.getItem('archive_access_token');
+const getRefreshToken = () => localStorage.getItem('archive_refresh_token');
+
+async function fetchWithAuth(url, options = {}) {
+  const token = getAccessToken();
+  
+  const headers = {
+    ...options.headers,
+    'Authorization': `Bearer ${token}`,
+  };
+
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  });
+
+  // Handle 401 by attempting token refresh once
+  if (response.status === 401 && getRefreshToken()) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      // Retry the original request with new token
+      const newToken = getAccessToken();
+      const retryHeaders = {
+        ...options.headers,
+        'Authorization': `Bearer ${newToken}`,
+      };
+      return fetch(url, {
+        ...options,
+        headers: retryHeaders,
+      });
+    }
+  }
+
+  return response;
+}
+
+async function refreshAccessToken() {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return false;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken })
+    });
+
+    if (!response.ok) {
+      // Clear tokens and force re-login
+      localStorage.removeItem('archive_access_token');
+      localStorage.removeItem('archive_refresh_token');
+      window.location.href = '/login';
+      return false;
+    }
+
+    const data = await response.json();
+    if (data.accessToken) {
+      localStorage.setItem('archive_access_token', data.accessToken);
+      return true;
+    }
+  } catch (e) {
+    console.error('Token refresh failed:', e);
+  }
+
+  return false;
+}
 
 export const apiService = {
   login: async (username, password) => {
@@ -25,12 +92,15 @@ export const apiService = {
     }
 
     const data = await response.json();
-    const tokenValue = data.Token || data.token;
-    if (!tokenValue) {
-      console.error('Token missing from response. Full response:', data);
-      throw new Error(`No token in response. Got: ${JSON.stringify(data)}`);
+    const accessToken = data.accessToken || data.AccessToken;
+    const refreshToken = data.refreshToken || data.RefreshToken;
+    
+    if (!accessToken || !refreshToken) {
+      console.error('Tokens missing from response. Full response:', data);
+      throw new Error(`Incomplete auth response. Got: ${JSON.stringify(data)}`);
     }
-    return { Token: tokenValue };
+    
+    return { accessToken, refreshToken };
   },
 
   register: async (username, password) => {
@@ -49,12 +119,23 @@ export const apiService = {
     return response.json();
   },
 
+  logout: async (refreshToken) => {
+    try {
+      await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken })
+      });
+    } catch (e) {
+      console.error('Logout API call failed:', e);
+    }
+  },
+
   getUserCategories: async (token) => {
     if (!token) throw new Error('No auth token');
-    const response = await fetch(`${API_BASE_URL}/categories/UserCategories`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/categories/UserCategories`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       }
     });
@@ -68,10 +149,9 @@ export const apiService = {
 
   getUserCategoriesEditPermission: async (token) => {
     if (!token) throw new Error('No auth token');
-    const response = await fetch(`${API_BASE_URL}/categories/UserCategoriesEditPermission`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/categories/UserCategoriesEditPermission`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       }
     });
@@ -85,10 +165,9 @@ export const apiService = {
 
   getActiveCategories: async (token) => {
     if (!token) throw new Error('No auth token');
-    const response = await fetch(`${API_BASE_URL}/categories/active`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/categories/active`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       }
     });
@@ -102,10 +181,9 @@ export const apiService = {
 
   getAllCategories: async (token) => {
     if (!token) throw new Error('No auth token');
-    const response = await fetch(`${API_BASE_URL}/categories`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/categories`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       }
     });
@@ -118,10 +196,9 @@ export const apiService = {
 
   searchUsers: async (keyword, token) => {
     if (!token) throw new Error('No auth token');
-    const response = await fetch(`${API_BASE_URL}/users/search?keyword=${encodeURIComponent(keyword)}`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/users/search?keyword=${encodeURIComponent(keyword)}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       }
     });
@@ -134,10 +211,9 @@ export const apiService = {
 
   activateCategoryByName: async (name, token) => {
     if (!token) throw new Error('No auth token');
-    const response = await fetch(`${API_BASE_URL}/categories/activate-by-name?name=${encodeURIComponent(name)}`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/categories/activate-by-name?name=${encodeURIComponent(name)}`, {
       method: 'PUT',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       }
     });
@@ -150,10 +226,9 @@ export const apiService = {
 
   getPermissions: async (token) => {
     if (!token) throw new Error('No auth token');
-    const response = await fetch(`${API_BASE_URL}/permissions`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/permissions`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       }
     });
@@ -166,10 +241,9 @@ export const apiService = {
 
   createPermission: async (name, token) => {
     if (!token) throw new Error('No auth token');
-    const response = await fetch(`${API_BASE_URL}/permissions`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/permissions`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ name })
@@ -182,19 +256,17 @@ export const apiService = {
         throw new Error(`HTTP ${response.status} - Server error`);
       }
     }
-    // Back-end may return empty 200, no JSON
     if (response.headers.get('content-length') === '0' || response.status === 204) {
-      return { id: Date.now(), name }; // Optimistic fallback
+      return { id: Date.now(), name };
     }
     return response.json();
   },
 
   updatePermission: async (id, name, token) => {
     if (!token) throw new Error('No auth token');
-    const response = await fetch(`${API_BASE_URL}/permissions/${id}`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/permissions/${id}`, {
       method: 'PUT',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ name })
@@ -207,20 +279,16 @@ export const apiService = {
         throw new Error(`HTTP ${response.status} - Server error`);
       }
     }
-    // Back-end may return empty 200
     if (response.headers.get('content-length') === '0' || response.status === 204) {
-      return { id, name }; // Return updated object
+      return { id, name };
     }
     return response.json();
   },
 
   deletePermission: async (id, token) => {
     if (!token) throw new Error('No auth token');
-    const response = await fetch(`${API_BASE_URL}/permissions/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+    const response = await fetchWithAuth(`${API_BASE_URL}/permissions/${id}`, {
+      method: 'DELETE'
     });
     if (!response.ok) {
       try {
@@ -230,16 +298,14 @@ export const apiService = {
         throw new Error(`HTTP ${response.status}`);
       }
     }
-    // DELETE typically returns 204 No Content - no JSON needed
     return { success: true };
   },
 
   assignUserCategoryPermission: async (data, token) => {
     if (!token) throw new Error('No auth token');
-    const response = await fetch(`${API_BASE_URL}/admin/assign-permissions`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/admin/assign-permissions`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(data)
@@ -260,17 +326,15 @@ export const apiService = {
       }
       throw new Error(errorMessage);
     }
-    // May return plain text "Permissions updated successfully"
     const text = await response.text();
     return { success: true, message: text };
   },
 
   getUserCategoryPermissions: async (userId, token) => {
     if (!token) throw new Error('No auth token');
-    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/category-permissions`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/admin/users/${userId}/category-permissions`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       }
     });
@@ -281,12 +345,28 @@ export const apiService = {
     return response.json();
   },
 
-  getFiles: async (page = 1, token) => {
+  getFiles: async (page = 1, token, filters = {}) => {
     if (!token) throw new Error('No auth token');
-    const response = await fetch(`${API_BASE_URL}/files?page=${page}`, {
+    
+    const queryParams = new URLSearchParams();
+    queryParams.append('page', page);
+    
+    if (filters.categoryId) {
+      queryParams.append('categoryId', filters.categoryId);
+    }
+    if (filters.fileNumber) {
+      queryParams.append('fileNumber', filters.fileNumber);
+    }
+    if (filters.year) {
+      queryParams.append('year', filters.year);
+    }
+    if (filters.status) {
+      queryParams.append('status', filters.status);
+    }
+    
+    const response = await fetchWithAuth(`${API_BASE_URL}/files?${queryParams.toString()}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       }
     });
@@ -299,11 +379,8 @@ export const apiService = {
 
   uploadFile: async (formData, token) => {
     if (!token) throw new Error('No token');
-    const response = await fetch(`${API_BASE_URL}/files/upload`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/files/upload`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      },
       body: formData
     });
     if (!response.ok) {
@@ -315,11 +392,8 @@ export const apiService = {
 
   previewFile: async (fileId, token) => {
     if (!token) throw new Error('No auth token');
-    const response = await fetch(`${API_BASE_URL}/files/preview/${fileId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+    const response = await fetchWithAuth(`${API_BASE_URL}/files/preview/${fileId}`, {
+      method: 'GET'
     });
     if (!response.ok) {
       throw new Error(`Failed to fetch preview: HTTP ${response.status}`);
@@ -329,11 +403,8 @@ export const apiService = {
 
   downloadFile: async (fileId, token) => {
     if (!token) throw new Error('No auth token');
-    const response = await fetch(`${API_BASE_URL}/files/download/${fileId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+    const response = await fetchWithAuth(`${API_BASE_URL}/files/download/${fileId}`, {
+      method: 'GET'
     });
     if (!response.ok) {
       throw new Error(`Failed to download file: HTTP ${response.status}`);
@@ -344,10 +415,9 @@ export const apiService = {
   renameFile: async (fileId, newName, token) => {
     if (!token) throw new Error('No auth token');
     if (!newName?.trim()) throw new Error('File name cannot be empty');
-    const response = await fetch(`${API_BASE_URL}/files/${fileId}/rename`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/files/${fileId}/rename`, {
       method: 'PUT',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ fileName: newName.trim() })

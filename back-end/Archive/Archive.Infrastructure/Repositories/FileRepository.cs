@@ -18,17 +18,60 @@ namespace Archive.Infrastructure.Repositories
             int userId,
             int page,
             int pageSize,
-            CancellationToken ct)
+            int? categoryId = null,
+            string? fileNumber = null,
+            string? year = null,
+            string? status = null,
+            CancellationToken ct = default)
         {
             var now = DateTime.UtcNow;
 
-            return await _context.Files
+            var query = _context.Files
                 .AsNoTracking()
                 .Where(f =>
                     f.Category.IsActive &&
                     f.Category.UserCategoryPermissions.Any(p =>
                         p.UserId == userId &&
-                        p.Permission.Name == "READ"))
+                        p.Permission.Name == "READ"));
+
+            // Apply category filter (exact match)
+            if (categoryId.HasValue)
+            {
+                query = query.Where(f => f.CategoryId == categoryId.Value);
+            }
+
+            // Apply file number filter (partial search)
+            if (!string.IsNullOrEmpty(fileNumber))
+            {
+                query = query.Where(f => f.FileNumber.Contains(fileNumber));
+            }
+
+            // Apply year filter on InputDate (text-based search)
+            if (!string.IsNullOrEmpty(year))
+            {
+                if (int.TryParse(year, out int yearValue))
+                {
+                    var startDate = new DateTime(yearValue, 1, 1);
+                    var endDate = startDate.AddYears(1);
+                    query = query.Where(f => f.InputDate >= startDate && f.InputDate < endDate);
+                }
+            }
+
+            // Apply status filter
+            if (!string.IsNullOrEmpty(status))
+            {
+                query = query.Where(f =>
+                    (status == "RED" && f.ExpireDate.HasValue && 
+                        EF.Functions.DateDiffDay(now, f.ExpireDate.Value) <= 14) ||
+                    (status == "YELLOW" && f.ExpireDate.HasValue && 
+                        EF.Functions.DateDiffDay(now, f.ExpireDate.Value) > 14 && 
+                        EF.Functions.DateDiffDay(now, f.ExpireDate.Value) <= 180) ||
+                    (status == "GREEN" && 
+                        (!f.ExpireDate.HasValue || EF.Functions.DateDiffDay(now, f.ExpireDate.Value) > 180)) ||
+                    (status == "UNKNOWN" && !f.ExpireDate.HasValue));
+            }
+
+            return await query
                 .Select(f => new
                 {
                     File = f,

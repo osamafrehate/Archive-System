@@ -1,82 +1,8 @@
-﻿//using Archive.Application.DTOs;
-//using Archive.Application.Interfaces.Repositories;
-//using Archive.Application.Interfaces.Services;
-//using Archive.Domain.Entities;
-//using System;
-//using System.Collections.Generic;
-//using System.Linq;
-//using System.Text;
-//using System.Threading.Tasks;
-
-//namespace Archive.Application.Services
-//{
-//    public class AdminService : IAdminService
-//    {
-//        private readonly IUserCategoryPermissionRepository _repo;
-//        private readonly IPermissionRepository _permissionRepo;
-
-//        public AdminService(
-//            IUserCategoryPermissionRepository repo,
-//            IPermissionRepository permissionRepo)
-//        {
-//            _repo = repo;
-//            _permissionRepo = permissionRepo;
-//        }
-
-//        public async Task AssignPermissionsAsync(AssignUserPermissionsDto dto, CancellationToken ct)
-//        {
-//            foreach (var category in dto.Categories)
-//            {
-//                var existing = await _repo.GetByUserAndCategory(dto.UserId, category.CategoryId, ct);
-
-//                if (!category.IsSelected)
-//                {
-//                    await _repo.RemoveRange(existing, ct);
-//                    continue;
-//                }
-
-//                var existingPermissions = existing
-//                    .Select(x => x.Permission.Name)
-//                    .ToList();
-
-//                var requestedPermissions = category.Permissions ?? new List<string>();
-
-//                foreach (var perm in requestedPermissions)
-//                {
-//                    if (!existingPermissions.Contains(perm))
-//                    {
-//                        var permissionEntity = await _permissionRepo.GetByNameAsync(perm, ct);
-
-//                        if (permissionEntity == null)
-//                            throw new Exception($"Permission '{perm}' not found");
-
-//                        var newRelation = new UserCategoryPermission(
-//                            dto.UserId,
-//                            category.CategoryId,
-//                            permissionEntity.Id
-//                        );
-
-//                        await _repo.AddAsync(newRelation, ct);
-//                    }
-//                }
-
-//                var toRemove = existing
-//                    .Where(x => !requestedPermissions.Contains(x.Permission.Name))
-//                    .ToList();
-
-//                if (toRemove.Any())
-//                    await _repo.RemoveRange(toRemove, ct);
-//            }
-//        }
-//    }
-//    }
-///////////////////////////////////////////////////////////
-/////
-///
-using Archive.Application.DTOs;
+﻿using Archive.Application.DTOs;
 using Archive.Application.Interfaces.Repositories;
 using Archive.Application.Interfaces.Services;
 using Archive.Domain.Entities;
+using System.Data;
 
 
 namespace Archive.Application.Services
@@ -97,56 +23,71 @@ namespace Archive.Application.Services
             _userRepo = userRepo;
         }
 
+        /// <summary>
+        /// Atomically assigns permissions to a user in a single SQL transaction.
+        /// Flattens the DTO into a DataTable and executes a single repository call
+        /// that deletes all existing permissions and inserts new ones.
+        /// 
+        /// This is a complete state replacement operation:
+        /// - All existing permissions are deleted
+        /// - All new permissions from the DTO are inserted
+        /// - Everything happens in one transaction (all or nothing)
+        /// </summary>
         public async Task AssignPermissionsAsync(
             AssignUserPermissionsDto dto,
             CancellationToken ct)
         {
-            foreach (var category in dto.Categories)
-            {
-                var existing = await _repo.GetByUserAndCategory(
-                    dto.UserId,
-                    category.CategoryId,
-                    ct);
+            // Validate user exists
+            var user = await _userRepo.GetByIdAsync(dto.UserId, ct);
+            if (user == null)
+                throw new Exception($"User with ID {dto.UserId} not found");
 
-                if (!category.IsSelected)
-                {
-                    await _repo.RemoveRange(existing, ct);
-                    await _repo.SaveChangesAsync(ct);
-                    continue;
-                }
+            // Flatten DTO to DataTable with schema: CategoryId, PermissionName
+            var permissionsDataTable = FlattenPermissionsDto(dto);
 
-                var existingPermissions = existing
-                    .Select(x => x.Permission.Name)
-                    .ToList();
-
-                var requestedPermissions = category.Permissions ?? new List<string>();
-
-                foreach (var perm in requestedPermissions)
-                {
-                    if (!existingPermissions.Contains(perm))
-                    {
-                        var permissionEntity = await _permissionRepo
-                            .GetByNameAsync(perm, ct);
-
-                        var newRelation = new UserCategoryPermission(
-                            dto.UserId,
-                            category.CategoryId,
-                            permissionEntity.Id);
-
-                        await _repo.AddAsync(newRelation, ct);
-                    }
-                }
-
-                var toRemove = existing
-                    .Where(x => !requestedPermissions.Contains(x.Permission.Name))
-                    .ToList();
-
-                if (toRemove.Any())
-                    await _repo.RemoveRange(toRemove, ct);
-
-                await _repo.SaveChangesAsync(ct);
-            }
+            // Single repository call - executes one transaction with DELETE + INSERT
+            await _repo.ReplaceUserPermissionsAsync(dto.UserId, permissionsDataTable, ct);
         }
+
+        /// <summary>
+        /// Converts the nested DTO structure into a flat DataTable for bulk assignment.
+        /// 
+        /// Input DTO example:
+        /// Categories[0]: { CategoryId: 1, IsSelected: true, Permissions: ["Read", "Write"] }
+        /// Categories[1]: { CategoryId: 2, IsSelected: true, Permissions: ["Read"] }
+        /// Categories[2]: { CategoryId: 3, IsSelected: false, ... }  <- Ignored
+        /// 
+        /// Output DataTable:
+        /// | CategoryId | PermissionName |
+        /// |----------- |----------------|
+        /// | 1          | Read           |
+        /// | 1          | Write          |
+        /// | 2          | Read           |
+        /// </summary>
+        private DataTable FlattenPermissionsDto(AssignUserPermissionsDto dto)
+        {
+            var dataTable = new DataTable();
+            dataTable.Columns.Add("CategoryId", typeof(int));
+            dataTable.Columns.Add("PermissionName", typeof(string));
+
+            // Only include selected categories and their permissions
+            foreach (var category in dto.Categories ?? new List<CategoryPermissionDto>())
+            {
+                // Skip deselected categories
+                if (!category.IsSelected)
+                    continue;
+
+                // Add each permission for this category
+                var permissions = category.Permissions ?? new List<string>();
+                foreach (var permissionName in permissions)
+                {
+                    dataTable.Rows.Add(category.CategoryId, permissionName);
+                }
+            }
+
+            return dataTable;
+        }
+
         public async Task<UserCategoryPermissionsDto> GetUserCategoryPermissionsAsync(
            int userId,
            CancellationToken ct)

@@ -4,7 +4,7 @@ import './Header.css';
 
 export default function Header() {
   const navigate = useNavigate();
-  const { role } = useAuth();
+  const { role, logout, isAuthenticated } = useAuth();
   const isAdmin = role === 'Admin';
 
   const handleOpenStatusPage = () => {
@@ -13,6 +13,10 @@ export default function Header() {
 
   const handleOpenAdminPanel = () => {
     navigate('/admin');
+  };
+
+  const handleLogout = () => {
+    logout();
   };
 
   return (
@@ -24,9 +28,6 @@ export default function Header() {
           <Link to="/upload" className="header-button text-button">
             Upload
           </Link>
-          {/* <Link to="/search" className="header-button text-button">
-            Search
-          </Link> */}
           
           <button
             onClick={handleOpenStatusPage}
@@ -45,8 +46,19 @@ export default function Header() {
               Admin Panel
             </button>
           )}
+
+          {isAuthenticated && (
+            <button
+              onClick={handleLogout}
+              className="header-button logout-button"
+              type="button"
+            >
+              Logout
+            </button>
+          )}
         </div>
       </div>
     </header>
   );
 }
+

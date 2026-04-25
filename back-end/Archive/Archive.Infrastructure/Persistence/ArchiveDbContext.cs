@@ -20,6 +20,7 @@ namespace Archive.Infrastructure.Persistence
         public DbSet<Permission> Permissions => Set<Permission>();
         public DbSet<FileArchive> Files => Set<FileArchive>();
         public DbSet<UserCategoryPermission> UserCategoryPermissions => Set<UserCategoryPermission>();
+        public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

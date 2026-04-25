@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace Archive.Infrastructure.Services.Authentication
 {
-    public class JwtTokenService :IJwtTokenService
+    public class JwtTokenService : IJwtTokenService
     {
         private readonly IConfiguration _config;
 
@@ -31,10 +31,10 @@ namespace Archive.Infrastructure.Services.Authentication
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var claims = new[]
-{
-            new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-            new Claim(ClaimTypes.Name, username),
-            new Claim(ClaimTypes.Role, role) 
+            {
+                new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+                new Claim(ClaimTypes.Name, username),
+                new Claim(ClaimTypes.Role, role)
             };
 
             var token = new JwtSecurityToken(
@@ -47,5 +47,11 @@ namespace Archive.Infrastructure.Services.Authentication
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+
+        public string CreateRefreshToken()
+        {
+            return Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(64));
+        }
     }
 }
+

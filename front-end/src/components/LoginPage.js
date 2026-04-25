@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { apiService } from '../services/apiService';
@@ -10,7 +10,14 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/upload', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleUsernameChange = (e) => {
     setUsername(e.target.value);
@@ -35,8 +42,9 @@ export default function LoginPage() {
 
     try {
       const response = await apiService.login(username, password);
-      login(response.Token);
-      navigate('/upload');
+      login(response.accessToken, response.refreshToken);
+      // Use replace: true to prevent back-button navigation to login
+      navigate('/upload', { replace: true });
     } catch (err) {
       setError(err.message || 'Login failed. Please try again.');
       setPassword('');
@@ -91,3 +99,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

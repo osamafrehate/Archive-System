@@ -1,14 +1,14 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿//using Microsoft.AspNetCore.Mvc;
 
-namespace Archive.API.Attributes;
+//namespace Archive.API.Attributes;
 
-[AttributeUsage(AttributeTargets.Method)]
-public class RequirePermissionAttribute : Attribute
-{
-    public string PermissionKey { get; }
+//[AttributeUsage(AttributeTargets.Method)]
+//public class RequirePermissionAttribute : Attribute
+//{
+//    public string PermissionKey { get; }
 
-    public RequirePermissionAttribute(string permissionKey)
-    {
-        PermissionKey = permissionKey;
-    }
-}
+//    public RequirePermissionAttribute(string permissionKey)
+//    {
+//        PermissionKey = permissionKey;
+//    }
+//}

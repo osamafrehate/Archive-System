@@ -1,7 +1,6 @@
 ﻿using Archive.Application.DTOs;
 using Archive.Application.Interfaces.Authentication;
 using Microsoft.AspNetCore.Mvc;
-using StackExchange.Redis;
 using System.Security.Claims;
 
 namespace Archive.API.Controllers;
@@ -33,8 +32,32 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginDto dto, CancellationToken ct)
     {
-        var token = await _authService.LoginAsync(dto.Username, dto.Password, ct);
-        return Ok(new { Token = token });
+        var authResponse = await _authService.LoginAsync(dto.Username, dto.Password, ct);
+        return Ok(authResponse);
+    }
+
+    // =========================
+    // REFRESH TOKEN
+    // =========================
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh(RefreshRequest request, CancellationToken ct)
+    {
+        var result = await _authService.RefreshAsync(request.RefreshToken, ct);
+
+        if (result == null)
+            return Unauthorized(new { message = "Invalid or expired refresh token" });
+
+        return Ok(result);
+    }
+
+    // =========================
+    // LOGOUT
+    // =========================
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(RefreshRequest request, CancellationToken ct)
+    {
+        await _authService.LogoutAsync(request.RefreshToken, ct);
+        return Ok(new { message = "Logged out successfully" });
     }
 
     // =========================
@@ -47,7 +70,6 @@ public class AuthController : ControllerBase
         var username = User.FindFirst(ClaimTypes.Name)?.Value;
         var role = User.FindFirst(ClaimTypes.Role)?.Value;
 
-
         return Ok(new
         {
             UserId = userId,
@@ -57,3 +79,4 @@ public class AuthController : ControllerBase
         });
     }
 }
+

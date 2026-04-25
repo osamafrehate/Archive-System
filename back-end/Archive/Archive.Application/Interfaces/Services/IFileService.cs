@@ -12,7 +12,11 @@ namespace Archive.Application.Interfaces.Services
         Task<List<FileDto>> GetAllAsync(
             int userId,
             int page,
-            CancellationToken ct);
+            int? categoryId = null,
+            string? fileNumber = null,
+            string? year = null,
+            string? status = null,
+            CancellationToken ct = default);
 
         Task<int> UploadAsync(
            UploadFileDto dto,
