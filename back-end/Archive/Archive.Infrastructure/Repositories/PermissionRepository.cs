@@ -1,33 +1,4 @@
-﻿//using Archive.Application.Interfaces.Repositories;
-//using Archive.Domain.Entities;
-//using Archive.Infrastructure.Persistence;
-//using Microsoft.EntityFrameworkCore;
-//using System;
-//using System.Collections.Generic;
-//using System.Linq;
-//using System.Text;
-//using System.Threading.Tasks;
-
-//namespace Archive.Infrastructure.Repositories
-//{
-//    public class PermissionRepository :IPermissionRepository
-//    {
-//        private readonly ArchiveDbContext _context;
-
-//        public PermissionRepository(ArchiveDbContext context)
-//        {
-//            _context = context;
-//        }
-
-//        public async Task<Permission?> GetByNameAsync(string name, CancellationToken ct)
-//        {
-//            return await _context.Permissions
-//                .FirstOrDefaultAsync(p => p.Name == name, ct);
-//        }
-//    }
-//}
-///////////////////////
-///
+﻿
 using Archive.Application.Interfaces.Repositories;
 using Archive.Domain.Entities;
 using Archive.Infrastructure.Persistence;

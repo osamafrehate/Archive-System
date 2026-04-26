@@ -147,6 +147,22 @@ export const apiService = {
     return data.map(cat => ({ id: cat.id, name: cat.name })); 
   },
 
+  getUserCategoriesReadPermission: async (token) => {
+    if (!token) throw new Error('No auth token');
+    const response = await fetchWithAuth(`${API_BASE_URL}/categories/UserCategoriesReadPermission`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || `HTTP ${response.status}`); 
+    }
+    const data = await response.json();
+    return data.map(cat => ({ id: cat.id, name: cat.name })); 
+  },
+
   getUserCategoriesEditPermission: async (token) => {
     if (!token) throw new Error('No auth token');
     const response = await fetchWithAuth(`${API_BASE_URL}/categories/UserCategoriesEditPermission`, {

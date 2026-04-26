@@ -21,6 +21,7 @@ namespace Archive.Application.Interfaces.Repositories
 
         Task<bool> ExistsByNameAsync(string name, CancellationToken ct);
         Task<List<Category>> GetUserCategoriesAsync(int userId, CancellationToken ct);
+        Task<List<Category>> GetUserCategoriesReadPermissionAsync(int userId, CancellationToken ct);
         Task<List<Category>> GetUserCategoriesEditPermissionAsync(int userId, CancellationToken ct);
         Task ActivateByNameAsync(string categoryName, CancellationToken ct);
         Task<string?> GetCategoryNameAsync(int categoryId, CancellationToken ct);

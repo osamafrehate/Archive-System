@@ -1,8 +1,7 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { apiService } from '../services/apiService';
-import { CategoryContext } from '../context/CategoryContext';
 import Header from './Header';
 import StatusFileRow from './StatusFileRow';
 import { exportToExcel } from '../utils/excelExportUtils';
@@ -13,9 +12,9 @@ export default function StatusFilePage() {
   const { token } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { categories } = useContext(CategoryContext);
 
   const [files, setFiles] = useState([]);
+  const [readCategories, setReadCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -28,6 +27,21 @@ export default function StatusFilePage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMorePages, setHasMorePages] = useState(false);
+
+  // Fetch categories with READ permission for the filter dropdown
+  useEffect(() => {
+    const fetchReadCategories = async () => {
+      if (!token) return;
+      try {
+        const data = await apiService.getUserCategoriesReadPermission(token);
+        setReadCategories(data);
+      } catch (err) {
+        console.error('Failed to fetch READ categories:', err);
+        setReadCategories([]);
+      }
+    };
+    fetchReadCategories();
+  }, [token]);
 
   const PAGE_SIZE = 50;
 
@@ -233,7 +247,7 @@ export default function StatusFilePage() {
                 className="filter-input"
               >
                 <option value="">-- All Categories --</option>
-                {categories.map((cat) => (
+                {readCategories.map((cat) => (
                   <option key={cat.id} value={cat.id}>
                     {cat.name}
                   </option>

@@ -61,12 +61,12 @@ namespace Archive.Infrastructure.Repositories
             if (!string.IsNullOrEmpty(status))
             {
                 query = query.Where(f =>
-                    (status == "RED" && f.ExpireDate.HasValue && 
+                    (status == "RED" && f.ExpireDate.HasValue &&
                         EF.Functions.DateDiffDay(now, f.ExpireDate.Value) <= 14) ||
-                    (status == "YELLOW" && f.ExpireDate.HasValue && 
-                        EF.Functions.DateDiffDay(now, f.ExpireDate.Value) > 14 && 
+                    (status == "YELLOW" && f.ExpireDate.HasValue &&
+                        EF.Functions.DateDiffDay(now, f.ExpireDate.Value) > 14 &&
                         EF.Functions.DateDiffDay(now, f.ExpireDate.Value) <= 180) ||
-                    (status == "GREEN" && 
+                    (status == "GREEN" &&
                         (!f.ExpireDate.HasValue || EF.Functions.DateDiffDay(now, f.ExpireDate.Value) > 180)) ||
                     (status == "UNKNOWN" && !f.ExpireDate.HasValue));
             }

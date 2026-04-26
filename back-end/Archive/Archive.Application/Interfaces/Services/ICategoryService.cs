@@ -17,7 +17,7 @@ namespace Archive.Application.Interfaces.Services
 
         Task DeleteAsync(int userId, int categoryId, CancellationToken ct);
         Task<List<CategoryDto>> GetUserCategoriesAsync(int userId, CancellationToken ct);
-       
+        Task<List<CategoryDto>> GetUserCategoriesReadPermissionAsync(int userId, CancellationToken ct);
         Task<List<CategoryDto>> GetUserCategoriesEditPermissionAsync(int userId, CancellationToken ct);
         Task<List<CategoryDto>> GetActiveCategoriesAsync(CancellationToken ct);
         Task ActivateByNameAsync(string categoryName, CancellationToken ct);

@@ -53,8 +53,10 @@ namespace Archive.Application.Services
                 UploadedAt = file.UploadedAt,
                 InputDate = file.InputDate,
                 ExpireDate = file.ExpireDate,
-                CategoryName = file.Category.Name,
-                UploadedByUsername = file.UploadedBy.Username,
+
+                CategoryName = file.Category?.Name ?? "N/A",
+                UploadedByUsername = file.UploadedBy?.Username ?? "N/A",
+
                 Amount = file.Amount,
                 Status = CalculateStatus(file.ExpireDate)
             }).ToList();

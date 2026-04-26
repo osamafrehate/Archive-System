@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Archive.Infrastructure.Migrations
 {
     [DbContext(typeof(ArchiveDbContext))]
-    [Migration("20260420072009_added role admin and user")]
-    partial class addedroleadminanduser
+    [Migration("20260426114949_test")]
+    partial class test
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -52,6 +52,9 @@ namespace Archive.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
 
                     b.ToTable("CATEGORIES", (string)null);
                 });
@@ -135,6 +138,46 @@ namespace Archive.Infrastructure.Migrations
                     b.ToTable("PERMISSIONS", (string)null);
                 });
 
+            modelBuilder.Entity("Archive.Domain.Entities.RefreshToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRevoked")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshTokens");
+                });
+
             modelBuilder.Entity("Archive.Domain.Entities.User", b =>
                 {
                     b.Property<int>("Id")
@@ -210,6 +253,17 @@ namespace Archive.Infrastructure.Migrations
                     b.Navigation("UploadedBy");
                 });
 
+            modelBuilder.Entity("Archive.Domain.Entities.RefreshToken", b =>
+                {
+                    b.HasOne("Archive.Domain.Entities.User", "User")
+                        .WithMany("RefreshTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Archive.Domain.Entities.UserCategoryPermission", b =>
                 {
                     b.HasOne("Archive.Domain.Entities.Category", "Category")
@@ -251,6 +305,8 @@ namespace Archive.Infrastructure.Migrations
 
             modelBuilder.Entity("Archive.Domain.Entities.User", b =>
                 {
+                    b.Navigation("RefreshTokens");
+
                     b.Navigation("UploadedFiles");
 
                     b.Navigation("UserCategoryPermissions");

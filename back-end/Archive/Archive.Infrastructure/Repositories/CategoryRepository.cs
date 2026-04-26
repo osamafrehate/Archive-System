@@ -61,6 +61,19 @@ namespace Archive.Infrastructure.Repositories
            .AsNoTracking()
            .ToListAsync(ct);
         }
+        public async Task<List<Category>> GetUserCategoriesReadPermissionAsync(int userId, CancellationToken ct)
+        {
+            return await _context.Categories
+           .Where(c =>
+            c.IsActive &&
+            c.UserCategoryPermissions.Any(p =>
+                p.UserId == userId &&
+                p.PermissionId == 1 // READ
+            )
+           )
+           .AsNoTracking()
+           .ToListAsync(ct);
+        }
         public async Task<List<Category>> GetUserCategoriesEditPermissionAsync(int userId, CancellationToken ct)
         {
             return await _context.Categories

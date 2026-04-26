@@ -34,10 +34,10 @@ namespace Archive.Application.Services
 
         public async Task CreateAsync(int userId, string name, CancellationToken ct)
         {
-            var hasEdit = await _permissionService.HasAnyPermissionAsync(userId, "EDIT");
+            //var hasEdit = await _permissionService.HasAnyPermissionAsync(userId, "EDIT");
 
-            if (!hasEdit)
-                throw new Exception("No EDIT permission");
+            //if (!hasEdit)
+            //    throw new Exception("No EDIT permission");
 
             var exists = await _repo.ExistsByNameAsync(name, ct);
 
@@ -89,6 +89,17 @@ namespace Archive.Application.Services
         public async Task<List<CategoryDto>> GetUserCategoriesAsync(int userId, CancellationToken ct)
         {
             var categories = await _repo.GetUserCategoriesAsync(userId, ct);
+
+            return categories.Select(c => new CategoryDto
+            {
+                Id = c.Id,
+                Name = c.Name,
+                IsActive = c.IsActive,
+            }).ToList();
+        }
+        public async Task<List<CategoryDto>> GetUserCategoriesReadPermissionAsync(int userId, CancellationToken ct)
+        {
+            var categories = await _repo.GetUserCategoriesReadPermissionAsync(userId, ct);
 
             return categories.Select(c => new CategoryDto
             {

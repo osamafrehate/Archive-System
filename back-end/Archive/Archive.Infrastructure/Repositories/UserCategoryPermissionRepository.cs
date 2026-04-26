@@ -1,46 +1,4 @@
-﻿//using Archive.Application.Interfaces.Repositories;
-//using Archive.Domain.Entities;
-//using Archive.Infrastructure.Persistence;
-//using Microsoft.EntityFrameworkCore;
-//using System;
-//using System.Collections.Generic;
-//using System.Linq;
-//using System.Text;
-//using System.Threading.Tasks;
-
-//namespace Archive.Infrastructure.Repositories
-//{
-//    public class UserCategoryPermissionRepository :IUserCategoryPermissionRepository
-//    {
-//        private readonly ArchiveDbContext _context;
-
-//        public UserCategoryPermissionRepository(ArchiveDbContext context)
-//        {
-//            _context = context;
-//        }
-
-//        public async Task<List<UserCategoryPermission>> GetByUserAndCategory(int userId, int categoryId, CancellationToken ct)
-//        {
-//            return await _context.UserCategoryPermissions
-//                .Include(x => x.Permission)
-//                .Where(x => x.UserId == userId && x.CategoryId == categoryId)
-//                .ToListAsync(ct);
-//        }
-
-//        public async Task AddAsync(UserCategoryPermission entity, CancellationToken ct)
-//        {
-//            await _context.UserCategoryPermissions.AddAsync(entity, ct);
-//        }
-
-//        public async Task RemoveRange(List<UserCategoryPermission> entities, CancellationToken ct)
-//        {
-//            _context.UserCategoryPermissions.RemoveRange(entities);
-//            await Task.CompletedTask;
-//        }
-//    }
-//}
-////////////////////////////////////////////////
-///
+﻿
 using Archive.Application.Interfaces.Repositories;
 using Archive.Domain.Entities;
 using Archive.Infrastructure.Persistence;
@@ -59,17 +17,15 @@ namespace Archive.Infrastructure.Repositories
     public class UserCategoryPermissionRepository : IUserCategoryPermissionRepository
     {
         private readonly ArchiveDbContext _context;
-        private readonly string _connectionString;
+        
 
         public UserCategoryPermissionRepository(
-            ArchiveDbContext context,
-            IConfiguration configuration)
+            ArchiveDbContext context)
         {
             _context = context;
-            _connectionString = configuration.GetConnectionString("DefaultConnection")
-                ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
         }
-
+        private string _connectionString =>
+       _context.Database.GetConnectionString()!;
         /// <summary>
         /// Atomically replaces user permissions in a single SQL transaction.
         /// Deletes all existing permissions for the user and inserts new ones.
@@ -115,7 +71,7 @@ namespace Archive.Infrastructure.Repositories
                                 insertCmd.Parameters.AddWithValue("@UserId", userId);
                                 insertCmd.Parameters.AddWithValue("@CategoryId", categoryId);
                                 insertCmd.Parameters.AddWithValue("@PermissionName", permissionName);
-                                insertCmd.CommandTimeout = 30;
+                                insertCmd.CommandTimeout = 60;
                                 await insertCmd.ExecuteNonQueryAsync(ct);
                             }
                         }

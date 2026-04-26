@@ -40,6 +40,21 @@ namespace Archive.API.Controllers
 
             return Ok(result);
         }
+        //get Categories related to user as long as the user has Read permission on this category
+        [HttpGet("UserCategoriesReadPermission")]
+        public async Task<IActionResult> GetUserCategoriesReadPermission(CancellationToken ct)
+        {
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (claim == null)
+                return Ok(new List<CategoryDto>());
+
+            int userId = int.Parse(claim.Value);
+
+            var result = await _service.GetUserCategoriesReadPermissionAsync(userId, ct);
+
+            return Ok(result);
+        }
         //get Categories related to user as long as the user has Edit permission on this category
         [HttpGet("UserCategoriesEditPermission")]
         public async Task<IActionResult> GetUserCategoriesEditPermission(CancellationToken ct)
