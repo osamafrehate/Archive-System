@@ -104,27 +104,53 @@ export default function UploadPage() {
     setIsConfirmSaveOpen(true);
   };
 
-  const handleConfirmSave = () => {
+  const handleConfirmSave = async () => {
     // Clean up empty strings and trim whitespace
     const cleaned = tempCategories.map(item => item.trim()).filter(item => item !== '');
     
     // Find new categories that weren't in the original list
     const newAddedCategories = cleaned.filter(cat => !originalCategories.includes(cat));
     
-    // Sync new categories with SearchPage before updating main categories
-    newAddedCategories.forEach(cat => syncWithSearchPage(cat));
-    
-    // Save the complete list (including deletions, additions, and edits)
-    // This syncs all changes to the context for AdminPanel to see
-    setCategories(cleaned);
+    try {
+      // Call createCategory API for each new category
+      if (newAddedCategories.length > 0) {
+        for (const categoryName of newAddedCategories) {
+          try {
+            await apiService.createCategory(categoryName, token);
+            console.log(`Category created: ${categoryName}`);
+          } catch (error) {
+            console.error(`Failed to create category "${categoryName}":`, error);
+            alert(`Failed to create category "${categoryName}": ${error.message}`);
+            return; // Stop if any creation fails
+          }
+        }
+      }
 
-    if (!cleaned.includes(selectedCategory)) {
-      setSelectedCategory('');
+      // DO NOT sync new categories to SearchPage or context
+      // New categories won't have write permissions for current user
+      // User must request admin to grant write permission first
+      // Categories in dropdown are fetched from getUserCategories (write permission)
+      
+      // Save the complete list (including deletions, additions, and edits)
+      // This syncs all changes to the context for AdminPanel to see
+      setCategories(cleaned);
+
+      if (!cleaned.includes(selectedCategory)) {
+        setSelectedCategory('');
+      }
+
+      setIsConfirmSaveOpen(false);
+      setIsModalOpen(false);
+      setHasChanges(false);
+      
+      // Show success message only if new categories were created
+      if (newAddedCategories.length > 0) {
+        alert(`${newAddedCategories.length} category/categories created successfully!\nNote: You need write permission to upload files to these categories.`);
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+      alert(`Failed to save changes: ${error.message}`);
     }
-
-    setIsConfirmSaveOpen(false);
-    setIsModalOpen(false);
-    setHasChanges(false);
   };
 
   const handleCancelSave = () => {
@@ -139,7 +165,7 @@ export default function UploadPage() {
           <span className="document-type-label">Document Type:</span>
 
           <CategoryDropdown
-            categories={['Select a category', ...categories.map(cat => cat.name || cat)]}
+            categories={['Select a category', ...editCategories.map(cat => cat.name || cat)]}
             selectedCategory={selectedCategory || 'Select a category'}
             onCategoryChange={(value) => {
               if (value === 'Select a category') {

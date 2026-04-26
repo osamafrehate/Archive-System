@@ -12,6 +12,7 @@ namespace Archive.Application.Interfaces.Services
         Task AssignPermissionsAsync(AssignUserPermissionsDto dto,CancellationToken ct);
          Task<UserCategoryPermissionsDto> GetUserCategoryPermissionsAsync(
          int userId,
+         int? categoryId,
          CancellationToken ct);
         
         }

@@ -57,13 +57,20 @@ namespace Archive.Infrastructure.Repositories
         }
         public async Task<List<UserCategoryPermission>> GetUserCategoryPermissionsAsync(
             int userId,
+            int? categoryId,
             CancellationToken ct)
         {
-            return await _context.UserCategoryPermissions
+            var query = _context.UserCategoryPermissions
                 .Include(x => x.Category)
                 .Include(x => x.Permission)
-                .Where(x => x.UserId == userId)
-                .ToListAsync(ct);
+                .Where(x => x.UserId == userId);
+
+            if (categoryId.HasValue)
+            {
+                query = query.Where(x => x.CategoryId == categoryId.Value);
+            }
+
+            return await query.ToListAsync(ct);
         }
     }
 }

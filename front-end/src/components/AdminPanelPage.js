@@ -25,6 +25,8 @@ export default function AdminPanelPage() {
   // Categories management
   const [allCategories, setAllCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [creatingCategory, setCreatingCategory] = useState(false);
 
   // Permissions management
   const [permissions, setPermissions] = useState([]);
@@ -74,7 +76,7 @@ export default function AdminPanelPage() {
       }
     };
     fetchActive();
-  }, [token]);
+  }, [token, categories]); // Re-fetch when categories context changes (real-time sync trigger)
 
   // Fetch all categories
   const fetchAllCategories = useCallback(async () => {
@@ -92,7 +94,7 @@ export default function AdminPanelPage() {
 
   useEffect(() => {
     fetchAllCategories();
-  }, [fetchAllCategories]);
+  }, [fetchAllCategories, categories]); // Re-fetch when categories context changes (real-time sync trigger)
 
   // Fetch permissions
   const fetchPermissions = useCallback(async () => {
@@ -122,6 +124,51 @@ export default function AdminPanelPage() {
       fetchAllCategories();
     } catch (error) {
       console.error('Activate failed:', error);
+    }
+  };
+
+  // Create category
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) {
+      alert('Please enter a category name');
+      return;
+    }
+
+    setCreatingCategory(true);
+    try {
+      await apiService.createCategory(newCategoryName.trim(), token);
+      setNewCategoryName('');
+      
+      // Fetch all categories to update the All Categories list
+      await fetchAllCategories();
+      
+      // Fetch active categories to update the Category Permissions table
+      const activeData = await apiService.getActiveCategories(token);
+      setActiveCategories(activeData);
+      
+      // If a user is selected, update tempPermissions to include the new category
+      if (selectedUserId) {
+        const updatedMap = { ...tempPermissions };
+        // Add new categories that aren't already in tempPermissions
+        activeData.forEach(cat => {
+          if (!updatedMap[cat.name]) {
+            updatedMap[cat.name] = { enabled: false };
+            // Initialize all permission keys to false
+            permissions.forEach(perm => {
+              const permKey = perm.name.toLowerCase();
+              updatedMap[cat.name][permKey] = false;
+            });
+          }
+        });
+        setTempPermissions(updatedMap);
+      }
+      
+      alert('Category created successfully!');
+    } catch (error) {
+      console.error('Create category failed:', error);
+      alert(`Failed to create category: ${error.message}`);
+    } finally {
+      setCreatingCategory(false);
     }
   };
 
@@ -262,10 +309,11 @@ export default function AdminPanelPage() {
         return null;
       }).filter(Boolean);
     
-    // if (permissionsData.length === 0) {
-    //   alert('You delete All Categories');
-    //   return ;
-    // }
+    if (permissionsData.length === 0) {
+      alert('You delete All Categories');
+      return 0;
+      // return  ;
+    }
     
     const data = {
       userId: selectedUserId,
@@ -484,7 +532,28 @@ export default function AdminPanelPage() {
           )}
         </div>
 
-        {/* Permissions Management */}
+        {/* Create Category - Unified Design */}
+        <div className="permissions-management-section">
+          <h3>Create New Category</h3>
+          <div className="create-form">
+            <input
+              className="form-input"
+              placeholder="Category name"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleCreateCategory()}
+            />
+            <button 
+              className="create-btn" 
+              onClick={handleCreateCategory}
+              disabled={creatingCategory}
+            >
+              {creatingCategory ? 'Creating...' : 'Create'}
+            </button>
+          </div>
+        </div>
+
+        {/* Permissions Management - Unified Design */}
         <div className="permissions-management-section">
           <h3>Permissions Management</h3>
           <div className="create-form">

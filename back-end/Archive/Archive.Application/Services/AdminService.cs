@@ -90,9 +90,10 @@ namespace Archive.Application.Services
 
         public async Task<UserCategoryPermissionsDto> GetUserCategoryPermissionsAsync(
            int userId,
+           int? categoryId,
            CancellationToken ct)
         {
-            var data = await _userRepo.GetUserCategoryPermissionsAsync(userId, ct);
+            var data = await _userRepo.GetUserCategoryPermissionsAsync(userId, categoryId, ct);
 
             var result = data
                 .GroupBy(x => new { x.CategoryId, x.Category.Name })

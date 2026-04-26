@@ -30,9 +30,10 @@ namespace Archive.API.Controllers
         [HttpGet("users/{userId}/category-permissions")]
         public async Task<IActionResult> GetUserCategoryPermissions(
            int userId,
+           int? categoryId,
            CancellationToken ct)
         {
-            var result = await _adminService.GetUserCategoryPermissionsAsync(userId, ct);
+            var result = await _adminService.GetUserCategoryPermissionsAsync(userId, categoryId, ct);
             return Ok(result);
         }
     }

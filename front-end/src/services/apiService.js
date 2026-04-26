@@ -210,6 +210,31 @@ export const apiService = {
     return response.json();
   },
 
+  createCategory: async (name, token) => {
+    if (!token) throw new Error('No auth token');
+    if (!name || name.trim() === '') throw new Error('Category name cannot be empty');
+    
+    const response = await fetchWithAuth(`${API_BASE_URL}/categories?name=${encodeURIComponent(name.trim())}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}`;
+      try {
+        const error = await response.json();
+        errorMessage = error.message || error.title || errorMessage;
+      } catch {
+        // Fallback to status text
+        errorMessage = response.statusText || errorMessage;
+      }
+      throw new Error(errorMessage);
+    }
+    // The backend returns Ok() with empty body, so we construct the response
+    return { success: true, message: 'Category created successfully' };
+  },
+
   searchUsers: async (keyword, token) => {
     if (!token) throw new Error('No auth token');
     const response = await fetchWithAuth(`${API_BASE_URL}/users/search?keyword=${encodeURIComponent(keyword)}`, {
