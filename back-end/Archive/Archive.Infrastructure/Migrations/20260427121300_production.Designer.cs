@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Archive.Infrastructure.Migrations
 {
     [DbContext(typeof(ArchiveDbContext))]
-    [Migration("20260426114949_test")]
-    partial class test
+    [Migration("20260427121300_production")]
+    partial class production
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -107,9 +107,20 @@ namespace Archive.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CategoryId");
+                    b.HasIndex("FileName")
+                        .HasDatabaseName("IX_FILES_FileName");
 
-                    b.HasIndex("UploadedByUserId");
+                    b.HasIndex("FileNumber")
+                        .HasDatabaseName("IX_FILES_FileNumber");
+
+                    b.HasIndex("UploadedByUserId")
+                        .HasDatabaseName("IX_FILES_UploadedByUserId");
+
+                    b.HasIndex("CategoryId", "ExpireDate")
+                        .HasDatabaseName("IX_FILES_CategoryId_ExpireDate");
+
+                    b.HasIndex("CategoryId", "InputDate")
+                        .HasDatabaseName("IX_FILES_CategoryId_InputDate");
 
                     b.ToTable("FILES", (string)null);
                 });
@@ -171,9 +182,11 @@ namespace Archive.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Token")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("IX_RefreshTokens_Token");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "IsRevoked", "ExpiresAt")
+                        .HasDatabaseName("IX_RefreshTokens_UserId_IsRevoked_ExpiresAt");
 
                     b.ToTable("RefreshTokens");
                 });
@@ -194,12 +207,13 @@ namespace Archive.Infrastructure.Migrations
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("Role")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -210,6 +224,10 @@ namespace Archive.Infrastructure.Migrations
                         .HasColumnType("nvarchar(255)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Username")
+                        .IsUnique()
+                        .HasDatabaseName("IX_USERS_Username_Unique");
 
                     b.ToTable("USERS", (string)null);
                 });
@@ -227,9 +245,17 @@ namespace Archive.Infrastructure.Migrations
 
                     b.HasKey("UserId", "CategoryId", "PermissionId");
 
-                    b.HasIndex("CategoryId");
+                    b.HasIndex("CategoryId")
+                        .HasDatabaseName("IX_USER_CATEGORY_PERMISSIONS_CategoryId");
 
-                    b.HasIndex("PermissionId");
+                    b.HasIndex("PermissionId")
+                        .HasDatabaseName("IX_USER_CATEGORY_PERMISSIONS_PermissionId");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_USER_CATEGORY_PERMISSIONS_UserId");
+
+                    b.HasIndex("UserId", "CategoryId")
+                        .HasDatabaseName("IX_USER_CATEGORY_PERMISSIONS_UserId_CategoryId");
 
                     b.ToTable("USER_CATEGORY_PERMISSIONS", (string)null);
                 });
@@ -275,7 +301,7 @@ namespace Archive.Infrastructure.Migrations
                     b.HasOne("Archive.Domain.Entities.Permission", "Permission")
                         .WithMany("UserCategoryPermissions")
                         .HasForeignKey("PermissionId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Archive.Domain.Entities.User", "User")

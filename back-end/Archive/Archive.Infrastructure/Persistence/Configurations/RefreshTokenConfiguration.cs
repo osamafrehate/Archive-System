@@ -21,7 +21,12 @@ namespace Archive.Infrastructure.Persistence.Configurations
                 .HasDefaultValue(false);
 
             builder.HasIndex(rt => rt.Token)
-                .IsUnique();
+                .IsUnique()
+                .HasDatabaseName("IX_RefreshTokens_Token");
+
+            // ✅ Compound Index for Token Cleanup & Validation Queries
+            builder.HasIndex(x => new { x.UserId, x.IsRevoked, x.ExpiresAt })
+                .HasDatabaseName("IX_RefreshTokens_UserId_IsRevoked_ExpiresAt");
 
             builder.HasOne(rt => rt.User)
                 .WithMany(u => u.RefreshTokens)

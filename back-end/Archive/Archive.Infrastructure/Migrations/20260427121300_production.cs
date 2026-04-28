@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Archive.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class test : Migration
+    public partial class production : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -49,9 +49,9 @@ namespace Archive.Infrastructure.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Username = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    PasswordHash = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    PasswordHash = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    Role = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Role = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
@@ -141,7 +141,7 @@ namespace Archive.Infrastructure.Migrations
                         column: x => x.PermissionId,
                         principalTable: "PERMISSIONS",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_USER_CATEGORY_PERMISSIONS_USERS_UserId",
                         column: x => x.UserId,
@@ -157,9 +157,24 @@ namespace Archive.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_FILES_CategoryId",
+                name: "IX_FILES_CategoryId_ExpireDate",
                 table: "FILES",
-                column: "CategoryId");
+                columns: new[] { "CategoryId", "ExpireDate" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FILES_CategoryId_InputDate",
+                table: "FILES",
+                columns: new[] { "CategoryId", "InputDate" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FILES_FileName",
+                table: "FILES",
+                column: "FileName");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FILES_FileNumber",
+                table: "FILES",
+                column: "FileNumber");
 
             migrationBuilder.CreateIndex(
                 name: "IX_FILES_UploadedByUserId",
@@ -173,9 +188,9 @@ namespace Archive.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_RefreshTokens_UserId",
+                name: "IX_RefreshTokens_UserId_IsRevoked_ExpiresAt",
                 table: "RefreshTokens",
-                column: "UserId");
+                columns: new[] { "UserId", "IsRevoked", "ExpiresAt" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_USER_CATEGORY_PERMISSIONS_CategoryId",
@@ -186,6 +201,22 @@ namespace Archive.Infrastructure.Migrations
                 name: "IX_USER_CATEGORY_PERMISSIONS_PermissionId",
                 table: "USER_CATEGORY_PERMISSIONS",
                 column: "PermissionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_USER_CATEGORY_PERMISSIONS_UserId",
+                table: "USER_CATEGORY_PERMISSIONS",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_USER_CATEGORY_PERMISSIONS_UserId_CategoryId",
+                table: "USER_CATEGORY_PERMISSIONS",
+                columns: new[] { "UserId", "CategoryId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_USERS_Username_Unique",
+                table: "USERS",
+                column: "Username",
+                unique: true);
         }
 
         /// <inheritdoc />

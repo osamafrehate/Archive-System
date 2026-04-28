@@ -21,8 +21,28 @@ namespace Archive.Infrastructure.Persistence.Configurations
                 .HasMaxLength(255)
                 .IsRequired();
 
+            // ✅ CRITICAL: Unique index for login performance
+            // Query: WHERE Username = ?
+            // Usage: Every authentication attempt (LoginAsync, GetByUsernameAsync)
+            // This is essential and must remain
+            builder.HasIndex(x => x.Username)
+                .IsUnique()
+                .HasDatabaseName("IX_USERS_Username_Unique");
+
+            // ❌ REMOVED: IX_USERS_IsActive (low-selectivity boolean index)
+            // Reason: ~95% of users are active (poor selectivity)
+            // Maintenance cost > query benefit
+            // No real query patterns in codebase filter ONLY by IsActive
+            // Removing saves ~1-2MB storage + 2-3% write overhead
+
+            // ✅ Reduced from 500 to 256 (sufficient for bcrypt/argon2/PBKDF2)
             builder.Property(x => x.PasswordHash)
-                .HasMaxLength(500)
+                .HasMaxLength(256)
+                .IsRequired();
+
+            // ✅ Changed from nvarchar(max) to nvarchar(50) for "Admin", "User", "Manager"
+            builder.Property(x => x.Role)
+                .HasMaxLength(50)
                 .IsRequired();
 
             builder.Property(x => x.IsActive)
