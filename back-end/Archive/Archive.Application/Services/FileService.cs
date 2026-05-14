@@ -30,7 +30,7 @@ namespace Archive.Application.Services
             int userId,
             int page,
             int? categoryId = null,
-            string? fileNumber = null,
+            string? fileName = null,
             string? year = null,
             string? status = null,
             CancellationToken ct = default)
@@ -40,7 +40,7 @@ namespace Archive.Application.Services
                 page,
                 PageSize,
                 categoryId,
-                fileNumber,
+                fileName,
                 year,
                 status,
                 ct);
@@ -48,17 +48,17 @@ namespace Archive.Application.Services
             return files.Select(file => new FileDto
             {
                 Id = file.Id,
-                FileNumber = file.FileNumber,
+                FileNumber = file.IsDeleted ? string.Empty : file.FileNumber,
                 FileName = file.FileName,
                 UploadedAt = file.UploadedAt,
-                InputDate = file.InputDate,
-                ExpireDate = file.ExpireDate,
-
+                InputDate = file.IsDeleted ? null : file.InputDate,
+                ExpireDate = file.IsDeleted ? null : file.ExpireDate,
+                CategoryId = file.CategoryId,
                 CategoryName = file.Category?.Name ?? "N/A",
                 UploadedByUsername = file.UploadedBy?.Username ?? "N/A",
-
-                Amount = file.Amount,
-                Status = CalculateStatus(file.ExpireDate)
+                Amount = file.IsDeleted ? 0 : file.Amount,
+                Status = file.IsDeleted ? "Deleted" : CalculateStatus(file.ExpireDate),
+                IsDeleted = file.IsDeleted
             }).ToList();
         }
 
@@ -128,6 +128,10 @@ namespace Archive.Application.Services
             if (file == null)
                 return null;
 
+            // Check if file is deleted
+            if (file.IsDeleted)
+                return null;
+
             var hasPermission = await _permissionService.HasPermissionAsync(
                 userId,
                 file.CategoryId,
@@ -165,6 +169,85 @@ namespace Archive.Application.Services
                 throw new Exception("No permission");
 
             file.UpdateFileName(newFileName); 
+
+            await _repo.SaveChangesAsync(ct);
+        }
+
+        public async Task UpdateFileMetadataAsync(
+            int fileId,
+            int userId,
+            UpdateFileMetadataDto dto,
+            CancellationToken ct)
+        {
+            var file = await _repo.GetByIdAsync(fileId, ct);
+
+            if (file == null)
+                throw new Exception("File not found");
+
+            // Check for EDIT FILE permission on the file's current category
+            var hasPermission = await _permissionService.HasPermissionAsync(
+                userId,
+                file.CategoryId,
+                "EDIT FILE");
+
+            if (!hasPermission)
+                throw new Exception("No EDIT FILE permission");
+
+            // Update fileName if provided
+            if (!string.IsNullOrWhiteSpace(dto.FileName))
+                file.UpdateFileName(dto.FileName);
+
+            // Update fileNumber if provided
+            if (!string.IsNullOrWhiteSpace(dto.FileNumber))
+                file.UpdateFileNumber(dto.FileNumber);
+
+            // Update categoryId if provided
+            if (dto.CategoryId.HasValue && dto.CategoryId > 0)
+            {
+                // Verify new category exists
+                var newCategory = await _categoryRepo.GetByIdAsync(dto.CategoryId.Value, ct);
+                if (newCategory == null)
+                    throw new Exception("New category not found");
+
+                file.UpdateCategoryId(dto.CategoryId.Value);
+            }
+
+            // Update inputDate if provided
+            if (dto.InputDate.HasValue)
+                file.UpdateInputDate(dto.InputDate);
+
+            // Update expireDate if provided
+            if (dto.ExpireDate.HasValue)
+                file.UpdateExpireDate(dto.ExpireDate);
+
+            // Update amount if provided
+            if (dto.Amount.HasValue)
+                file.UpdateAmount(dto.Amount);
+
+            await _repo.SaveChangesAsync(ct);
+        }
+
+        public async Task SoftDeleteFileAsync(
+            int fileId,
+            int userId,
+            CancellationToken ct)
+        {
+            var file = await _repo.GetByIdAsync(fileId, ct);
+
+            if (file == null)
+                throw new Exception("File not found");
+
+            // Check for DELETE FILE permission on the file's category
+            var hasPermission = await _permissionService.HasPermissionAsync(
+                userId,
+                file.CategoryId,
+                "DELETE FILE");
+
+            if (!hasPermission)
+                throw new Exception("No DELETE FILE permission");
+
+            // Perform soft delete
+            file.SoftDelete();
 
             await _repo.SaveChangesAsync(ct);
         }

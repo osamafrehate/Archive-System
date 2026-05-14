@@ -1,9 +1,11 @@
 /**
  * Excel Export Utility
- * Generates CSV files that Excel opens with proper formatting
+ * Generates XLSX files with proper Excel formatting
  */
 
-export function exportToExcel(files, filename = 'Files.csv') {
+import ExcelJS from 'exceljs';
+
+export async function exportToExcel(files, filename = 'Files.xlsx') {
   if (!files || files.length === 0) {
     alert('No files to export');
     return;
@@ -15,15 +17,24 @@ export function exportToExcel(files, filename = 'Files.csv') {
     'File Name',
     'Category',
     'Uploaded By',
-    'Input Date',
+    'Document Date',
     'Expire Date',
     'Amount',
     'Status'
   ];
 
-  // Create CSV header (with BOM for proper UTF-8 encoding in Excel)
-  const BOM = '\uFEFF';
-  let csv = BOM + columns.map(col => escapeCSV(col)).join(',') + '\n';
+  // Create a new workbook and worksheet
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Files');
+
+  // Add header row with bold styling
+  const headerRow = worksheet.addRow(columns);
+  headerRow.font = { bold: true };
+  
+  // Apply bold to each header cell
+  headerRow.eachCell((cell) => {
+    cell.font = { bold: true };
+  });
 
   // Add data rows
   files.forEach((file) => {
@@ -34,30 +45,27 @@ export function exportToExcel(files, filename = 'Files.csv') {
       file.user || file.uploadedByUsername || '',
       formatDateForExcel(file.inputDate),
       formatDateForExcel(file.expireDate),
-      file.amount ? `$${formatAmount(file.amount)}` : '',
+      file.amount ? formatAmount(file.amount) : '',
       getStatusText(file.expireDate)
     ];
-    csv += row.map(cell => escapeCSV(cell)).join(',') + '\n';
+    worksheet.addRow(row);
   });
 
-  // Create blob and download
-  downloadFile(csv, filename, 'text/csv;charset=utf-8;');
-}
+  // Auto-fit columns to content width
+  worksheet.columns.forEach((column) => {
+    let maxLength = 12;
+    column.eachCell({ includeEmpty: true }, (cell) => {
+      const cellLength = cell.value ? String(cell.value).length : 0;
+      if (cellLength > maxLength) {
+        maxLength = cellLength;
+      }
+    });
+    column.width = Math.min(maxLength + 2, 50);
+  });
 
-/**
- * Escape CSV cell values (handle commas, quotes, newlines)
- */
-function escapeCSV(value) {
-  if (value === null || value === undefined) return '';
-  
-  const stringValue = String(value);
-  
-  // If contains comma, newline, or quote, wrap in quotes and escape internal quotes
-  if (stringValue.includes(',') || stringValue.includes('\n') || stringValue.includes('"')) {
-    return `"${stringValue.replace(/"/g, '""')}"`;
-  }
-  
-  return stringValue;
+  // Generate buffer and download
+  const buffer = await workbook.xlsx.writeBuffer();
+  downloadFile(buffer, filename, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 }
 
 /**
@@ -70,14 +78,12 @@ function formatDateForExcel(dateStr) {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return '';
     
-    // Format as YYYY-MM-DD HH:mm
+    // Format as M/D/YYYY (date only, no time)
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
     
-    return `${year}-${month}-${day} ${hours}:${minutes}`;
+    return `${month}/${day}/${year}`;
   } catch {
     return '';
   }
@@ -119,8 +125,8 @@ function getStatusText(expireDateString) {
 /**
  * Trigger file download
  */
-function downloadFile(content, filename, mimeType) {
-  const blob = new Blob([content], { type: mimeType });
+function downloadFile(buffer, filename, mimeType) {
+  const blob = new Blob([buffer], { type: mimeType });
   const url = URL.createObjectURL(blob);
   
   const link = document.createElement('a');

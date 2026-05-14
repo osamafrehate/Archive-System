@@ -81,12 +81,40 @@ namespace Archive.Infrastructure.Repositories
             c.IsActive &&
             c.UserCategoryPermissions.Any(p =>
                 p.UserId == userId &&
-                p.PermissionId == 3 // Edit
+                p.PermissionId == 3 // EDIT CATEGORY
             )
            )
            .AsNoTracking()
            .ToListAsync(ct);
         }
+        public async Task<List<Category>> GetUserCategoriesEditFilePermissionAsync(int userId, CancellationToken ct)
+        {
+            return await _context.Categories
+           .Where(c =>
+            c.IsActive &&
+            c.UserCategoryPermissions.Any(p =>
+                p.UserId == userId &&
+                p.PermissionId == 4 // EDIT FILE
+            )
+           )
+           .AsNoTracking()
+           .ToListAsync(ct);
+        }
+
+        public async Task<List<Category>> GetUserCategoriesDeleteFilePermissionAsync(int userId, CancellationToken ct)
+        {
+            return await _context.Categories
+           .Where(c =>
+            c.IsActive &&
+            c.UserCategoryPermissions.Any(p =>
+                p.UserId == userId &&
+                p.PermissionId == 5 // DELETE FILE
+            )
+           )
+           .AsNoTracking()
+           .ToListAsync(ct);
+        }
+
         public async Task ActivateByNameAsync(string categoryName, CancellationToken ct)
         {
             var category = await _context.Categories

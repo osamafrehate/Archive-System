@@ -24,7 +24,7 @@ public class FilesController : ControllerBase
     public async Task<IActionResult> GetAll(
         [FromQuery] int page = 1,
         [FromQuery] int? categoryId = null,
-        [FromQuery] string? fileNumber = null,
+        [FromQuery] string? fileName = null,
         [FromQuery] string? year = null,
         [FromQuery] string? status = null,
         CancellationToken ct = default)
@@ -36,7 +36,7 @@ public class FilesController : ControllerBase
             userId,
             page,
             categoryId,
-            fileNumber,
+            fileName,
             year,
             status,
             ct);
@@ -133,6 +133,39 @@ public class FilesController : ControllerBase
         return Ok(new
         {
             Message = "File renamed successfully"
+        });
+    }
+
+    [HttpPatch("{id}")]
+    public async Task<IActionResult> UpdateMetadata(
+        int id,
+        [FromBody] UpdateFileMetadataDto dto,
+        CancellationToken ct)
+    {
+        var userId = int.Parse(
+            User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        await _service.UpdateFileMetadataAsync(id, userId, dto, ct);
+
+        return Ok(new
+        {
+            Message = "File metadata updated successfully"
+        });
+    }
+
+    [HttpPatch("{id}/delete")]
+    public async Task<IActionResult> SoftDelete(
+        int id,
+        CancellationToken ct)
+    {
+        var userId = int.Parse(
+            User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        await _service.SoftDeleteFileAsync(id, userId, ct);
+
+        return Ok(new
+        {
+            Message = "File deleted successfully"
         });
     }
 }

@@ -4,6 +4,8 @@ import { useAuth } from '../hooks/useAuth';
 import { apiService } from '../services/apiService';
 import Header from './Header';
 import StatusFileRow from './StatusFileRow';
+import EditFileModal from './EditFileModal';
+import DeleteConfirmationModal from './DeleteConfirmationModal';
 import { exportToExcel } from '../utils/excelExportUtils';
 import './StatusFilePage.css';
 
@@ -15,12 +17,22 @@ export default function StatusFilePage() {
 
   const [files, setFiles] = useState([]);
   const [readCategories, setReadCategories] = useState([]);
+  const [editFileCategories, setEditFileCategories] = useState([]);
+  const [deleteFileCategories, setDeleteFileCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Edit modal states
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedFileForEdit, setSelectedFileForEdit] = useState(null);
+
+  // Delete modal states
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedFileForDelete, setSelectedFileForDelete] = useState(null);
+
   // Filter states
   const [categoryId, setCategoryId] = useState(null);
-  const [fileNumber, setFileNumber] = useState('');
+  const [fileName, setFileName] = useState('');
   const [yearInput, setYearInput] = useState(''); // For typing
   const [yearFilter, setYearFilter] = useState(''); // For filtering
   const [statusFilter, setStatusFilter] = useState('');
@@ -43,6 +55,36 @@ export default function StatusFilePage() {
     fetchReadCategories();
   }, [token]);
 
+  // Fetch categories with EDIT FILE permission for showing edit icons
+  useEffect(() => {
+    const fetchEditFileCategories = async () => {
+      if (!token) return;
+      try {
+        const data = await apiService.getUserCategoriesEditFilePermission(token);
+        setEditFileCategories(data);
+      } catch (err) {
+        console.error('Failed to fetch EDIT FILE categories:', err);
+        setEditFileCategories([]);
+      }
+    };
+    fetchEditFileCategories();
+  }, [token]);
+
+  // Fetch categories with DELETE FILE permission for showing delete icons
+  useEffect(() => {
+    const fetchDeleteFileCategories = async () => {
+      if (!token) return;
+      try {
+        const data = await apiService.getUserCategoriesDeleteFilePermission(token);
+        setDeleteFileCategories(data);
+      } catch (err) {
+        console.error('Failed to fetch DELETE FILE categories:', err);
+        setDeleteFileCategories([]);
+      }
+    };
+    fetchDeleteFileCategories();
+  }, [token]);
+
   const PAGE_SIZE = 50;
 
   // Parse URL query parameters on component mount
@@ -51,13 +93,13 @@ export default function StatusFilePage() {
     
     const page = parseInt(queryParams.get('page')) || 1;
     const cat = queryParams.get('categoryId') ? parseInt(queryParams.get('categoryId')) : null;
-    const fileNum = queryParams.get('fileNumber') || '';
+    const fname = queryParams.get('fileName') || '';
     const yr = queryParams.get('year') || '';
     const stat = queryParams.get('status') || '';
 
     setCurrentPage(page);
     setCategoryId(cat);
-    setFileNumber(fileNum);
+    setFileName(fname);
     setYearInput(yr);
     setYearFilter(yr);
     setStatusFilter(stat);
@@ -65,10 +107,10 @@ export default function StatusFilePage() {
 
   // Fetch files whenever page or filters change
   useEffect(() => {
-    fetchFiles(currentPage, categoryId, fileNumber, yearFilter, statusFilter);
-  }, [currentPage, categoryId, fileNumber, yearFilter, statusFilter, token]);
+    fetchFiles(currentPage, categoryId, fileName, yearFilter, statusFilter);
+  }, [currentPage, categoryId, fileName, yearFilter, statusFilter, token]);
 
-  const fetchFiles = async (page, catId, fileNum, yr, stat) => {
+  const fetchFiles = async (page, catId, fname, yr, stat) => {
 
     if (!token) {
       setLoading(false);
@@ -82,7 +124,7 @@ export default function StatusFilePage() {
 
       const filters = {};
       if (catId) filters.categoryId = catId;
-      if (fileNum) filters.fileNumber = fileNum;
+      if (fname) filters.fileName = fname;
       if (yr) filters.year = yr;
       if (stat) filters.status = stat;
 
@@ -108,12 +150,12 @@ export default function StatusFilePage() {
   };
 
   // Update URL when filters change
-  const updateFilters = (newCategoryId, newFileNumber, newYear, newStatus, newPage = 1) => {
+  const updateFilters = (newCategoryId, newFileName, newYear, newStatus, newPage = 1) => {
     const queryParams = new URLSearchParams();
     
     if (newPage) queryParams.append('page', newPage);
     if (newCategoryId) queryParams.append('categoryId', newCategoryId);
-    if (newFileNumber) queryParams.append('fileNumber', newFileNumber);
+    if (newFileName) queryParams.append('fileName', newFileName);
     if (newYear) queryParams.append('year', newYear);
     if (newStatus) queryParams.append('status', newStatus);
 
@@ -123,14 +165,14 @@ export default function StatusFilePage() {
   const handleCategoryChange = (e) => {
     const catId = e.target.value ? parseInt(e.target.value) : null;
     setCategoryId(catId);
-    updateFilters(catId, fileNumber, yearFilter, statusFilter, 1); // Reset to page 1
+    updateFilters(catId, fileName, yearFilter, statusFilter, 1); // Reset to page 1
     setCurrentPage(1);
   };
 
-  const handleFileNumberChange = (e) => {
-    const fileNum = e.target.value;
-    setFileNumber(fileNum);
-    updateFilters(categoryId, fileNum, yearFilter, statusFilter, 1); // Reset to page 1
+  const handleFileNameChange = (e) => {
+    const fname = e.target.value;
+    setFileName(fname);
+    updateFilters(categoryId, fname, yearFilter, statusFilter, 1); // Reset to page 1
     setCurrentPage(1);
   };
 
@@ -142,7 +184,7 @@ export default function StatusFilePage() {
   const handleYearBlur = () => {
     // Apply filter when user leaves the field
     setYearFilter(yearInput);
-    updateFilters(categoryId, fileNumber, yearInput, statusFilter, 1);
+    updateFilters(categoryId, fileName, yearInput, statusFilter, 1);
     setCurrentPage(1);
   };
 
@@ -150,7 +192,7 @@ export default function StatusFilePage() {
     // Apply filter when user presses Enter
     if (e.key === 'Enter') {
       setYearFilter(yearInput);
-      updateFilters(categoryId, fileNumber, yearInput, statusFilter, 1);
+      updateFilters(categoryId, fileName, yearInput, statusFilter, 1);
       setCurrentPage(1);
     }
   };
@@ -158,13 +200,13 @@ export default function StatusFilePage() {
   const handleStatusChange = (e) => {
     const stat = e.target.value;
     setStatusFilter(stat);
-    updateFilters(categoryId, fileNumber, yearFilter, stat, 1); // Reset to page 1
+    updateFilters(categoryId, fileName, yearFilter, stat, 1); // Reset to page 1
     setCurrentPage(1);
   };
 
   const handleClearFilters = () => {
     setCategoryId(null);
-    setFileNumber('');
+    setFileName('');
     setYearInput('');
     setYearFilter('');
     setStatusFilter('');
@@ -180,7 +222,7 @@ export default function StatusFilePage() {
       const queryParams = new URLSearchParams();
       queryParams.append('page', newPage);
       if (categoryId) queryParams.append('categoryId', categoryId);
-      if (fileNumber) queryParams.append('fileNumber', fileNumber);
+      if (fileName) queryParams.append('fileName', fileName);
       if (yearFilter) queryParams.append('year', yearFilter);
       if (statusFilter) queryParams.append('status', statusFilter);
       navigate(`?${queryParams.toString()}`);
@@ -196,7 +238,7 @@ export default function StatusFilePage() {
       const queryParams = new URLSearchParams();
       queryParams.append('page', newPage);
       if (categoryId) queryParams.append('categoryId', categoryId);
-      if (fileNumber) queryParams.append('fileNumber', fileNumber);
+      if (fileName) queryParams.append('fileName', fileName);
       if (yearFilter) queryParams.append('year', yearFilter);
       if (statusFilter) queryParams.append('status', statusFilter);
       navigate(`?${queryParams.toString()}`);
@@ -204,14 +246,69 @@ export default function StatusFilePage() {
 
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (files.length === 0) {
       alert('No files to export');
       return;
     }
     
     const timestamp = new Date().toISOString().split('T')[0];
-    exportToExcel(files, `Files_${timestamp}.csv`);
+    await exportToExcel(files, `Files_${timestamp}.xlsx`);
+  };
+
+  const handleOpenEditModal = (file) => {
+    setSelectedFileForEdit(file);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setSelectedFileForEdit(null);
+  };
+
+  const handleSaveFileMetadata = (updatedFile) => {
+    // Update the file in the list with new metadata
+    setFiles(prevFiles =>
+      prevFiles.map(f =>
+        f.id === updatedFile.id
+          ? {
+              ...f,
+              fileName: updatedFile.fileName,
+              fileNumber: updatedFile.fileNumber,
+              categoryId: updatedFile.categoryId,
+              categoryName: updatedFile.categoryName || updatedFile.documentType,
+              inputDate: updatedFile.inputDate,
+              expireDate: updatedFile.expireDate,
+              amount: updatedFile.amount
+            }
+          : f
+      )
+    );
+    handleCloseEditModal();
+  };
+
+  const handleOpenDeleteModal = (file) => {
+    setSelectedFileForDelete(file);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setSelectedFileForDelete(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedFileForDelete || !token) return;
+
+    try {
+      await apiService.deleteFile(selectedFileForDelete.id, token);
+      // Remove file from current page (deleted files move to last page naturally via database sorting)
+      setFiles(prevFiles => prevFiles.filter(f => f.id !== selectedFileForDelete.id));
+      handleCloseDeleteModal();
+    } catch (err) {
+      console.error('Failed to delete file:', err);
+      alert('Failed to delete file: ' + err.message);
+    }
   };
 
   if (loading && files.length === 0) {
@@ -239,14 +336,14 @@ export default function StatusFilePage() {
           <div className="filters-container">
             
             <div className="filter-group">
-              <label htmlFor="category-filter">Category:</label>
+              <label htmlFor="category-filter">Documents:</label>
               <select
                 id="category-filter"
                 value={categoryId || ''}
                 onChange={handleCategoryChange}
                 className="filter-input"
               >
-                <option value="">-- All Categories --</option>
+                <option value="">-- Document Types --</option>
                 {readCategories.map((cat) => (
                   <option key={cat.id} value={cat.id}>
                     {cat.name}
@@ -256,13 +353,13 @@ export default function StatusFilePage() {
             </div>
 
             <div className="filter-group">
-              <label htmlFor="file-number-filter">File Number:</label>
+              <label htmlFor="file-name-filter">File Name:</label>
               <input
-                id="file-number-filter"
+                id="file-name-filter"
                 type="text"
-                placeholder="Search file number..."
-                value={fileNumber}
-                onChange={handleFileNumberChange}
+                placeholder="Search file name..."
+                value={fileName}
+                onChange={handleFileNameChange}
                 className="filter-input"
               />
             </div>
@@ -300,7 +397,7 @@ export default function StatusFilePage() {
             <button
               className="clear-filters-btn"
               onClick={handleClearFilters}
-              disabled={!categoryId && !fileNumber && !yearFilter && !statusFilter}
+              disabled={!categoryId && !fileName && !yearFilter && !statusFilter}
             >
               Clear Filters
             </button>
@@ -317,7 +414,7 @@ export default function StatusFilePage() {
                 <th>User</th>
                 <th>File Name</th>
                 <th>File Number</th>
-                <th>Input Date</th>
+                <th>Document Date</th>
                 <th>Expire Date</th>
                 <th>Uploaded At</th>
                 <th>Document Type</th>
@@ -334,6 +431,7 @@ export default function StatusFilePage() {
                     key={file.id}
                     file={{
                       id: file.id,
+                      categoryId: file.categoryId,
                       user: file.uploadedByUsername,
                       originalFilename: file.fileName,
                       fileName: file.fileName,
@@ -343,8 +441,13 @@ export default function StatusFilePage() {
                       uploadedAt: file.uploadedAt,
                       documentType: file.categoryName,
                       amount: file.amount,
-                      status: file.status
+                      status: file.status,
+                      isDeleted: file.isDeleted
                     }}
+                    canEdit={editFileCategories.some(cat => cat.id === file.categoryId)}
+                    onEdit={handleOpenEditModal}
+                    canDelete={deleteFileCategories.some(cat => cat.id === file.categoryId)}
+                    onDelete={handleOpenDeleteModal}
                   />
 
                 ))
@@ -406,6 +509,20 @@ export default function StatusFilePage() {
         </div>
 
       </div>
+
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        fileName={selectedFileForDelete?.fileName}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCloseDeleteModal}
+      />
+
+      <EditFileModal
+        file={selectedFileForEdit}
+        isOpen={isEditModalOpen}
+        onClose={handleCloseEditModal}
+        onSave={handleSaveFileMetadata}
+      />
 
     </div>
   );

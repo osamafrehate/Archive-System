@@ -8,8 +8,8 @@ import CategoryDropdown from './CategoryDropdown';
 import StatusFileRow from './StatusFileRow';
 
 export default function SearchPage() {
-  // Get categories from global context (read-only for SearchPage)
-  const { searchPageCategories } = useContext(CategoryContext);
+  // Get context for fallback (SearchPage now fetches permission-based categories directly)
+  const { categories: contextCategories } = useContext(CategoryContext);
   const { token } = useAuth();
 
   const [searchFilters, setSearchFilters] = useState({
@@ -25,12 +25,15 @@ export default function SearchPage() {
   const [error, setError] = useState('');
   const [filteredFiles, setFilteredFiles] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [searchCategories, setSearchCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
   const isCategorySelected = !!searchFilters.category;
 
   useEffect(() => {
     if (token) {
       loadFiles();
+      loadSearchCategories();
     }
   }, [token]);
 
@@ -46,6 +49,28 @@ export default function SearchPage() {
       setFiles([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSearchCategories = async () => {
+    setLoadingCategories(true);
+    try {
+      // Fetch categories based on WRITE permission (same as UploadPage)
+      // This ensures search categories match available upload categories
+      const data = await apiService.getUserCategories(token);
+      const categoryNames = data.map(cat => 
+        typeof cat === 'string' ? cat : cat.name
+      );
+      setSearchCategories(categoryNames);
+    } catch (err) {
+      console.error('Failed to fetch search categories:', err);
+      // Fallback to context categories if API fails
+      const fallbackCategories = Array.isArray(contextCategories) 
+        ? contextCategories.map(cat => typeof cat === 'string' ? cat : cat.name)
+        : [];
+      setSearchCategories(fallbackCategories);
+    } finally {
+      setLoadingCategories(false);
     }
   };
 
@@ -156,10 +181,11 @@ export default function SearchPage() {
             <div className="form-group">
               <label htmlFor="category">Category</label>
               <CategoryDropdown
-                categories={['Select a category', ...searchPageCategories]}
+                categories={['Select a category', ...searchCategories]}
                 selectedCategory={searchFilters.category || 'Select a category'}
                 onCategoryChange={handleCategoryChange}
               />
+              {loadingCategories && <small style={{color: '#666', marginTop: '4px'}}>Loading categories...</small>}
             </div>
           </div>
 

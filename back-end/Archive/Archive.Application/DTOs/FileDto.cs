@@ -18,11 +18,13 @@ namespace Archive.Application.DTOs
         public DateTime? InputDate { get; set; }
         public DateTime? ExpireDate { get; set; }
 
+        public int CategoryId { get; set; }
         public string CategoryName { get; set; } = null!;
         public string UploadedByUsername { get; set; } = null!;
 
         public decimal? Amount { get; set; }
 
         public string Status { get; set; } = null!;
+        public bool IsDeleted { get; set; }
     }
 }

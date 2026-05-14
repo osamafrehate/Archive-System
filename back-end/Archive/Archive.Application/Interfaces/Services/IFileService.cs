@@ -26,5 +26,7 @@ namespace Archive.Application.Interfaces.Services
            CancellationToken ct);
         Task<DownloadFileDto?> GetFileForDownloadAsync(int fileId, int userId, CancellationToken ct);
         Task UpdateFileNameAsync(int fileId, int userId, string newFileName, CancellationToken ct);
+        Task UpdateFileMetadataAsync(int fileId, int userId, UpdateFileMetadataDto dto, CancellationToken ct);
+        Task SoftDeleteFileAsync(int fileId, int userId, CancellationToken ct);
     }
 }

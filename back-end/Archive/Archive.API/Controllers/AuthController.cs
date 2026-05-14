@@ -1,5 +1,6 @@
 ﻿using Archive.Application.DTOs;
 using Archive.Application.Interfaces.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -19,6 +20,7 @@ public class AuthController : ControllerBase
     // =========================
     // REGISTER USER
     // =========================
+    [Authorize(Roles = "Admin")]
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterDto dto, CancellationToken ct)
     {

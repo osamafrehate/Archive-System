@@ -55,7 +55,7 @@ namespace Archive.API.Controllers
 
             return Ok(result);
         }
-        //get Categories related to user as long as the user has Edit permission on this category
+        //get Categories related to user as long as the user has EDIT CATEGORY permission on this category
         [HttpGet("UserCategoriesEditPermission")]
         public async Task<IActionResult> GetUserCategoriesEditPermission(CancellationToken ct)
         {
@@ -70,38 +70,92 @@ namespace Archive.API.Controllers
 
             return Ok(result);
         }
+        //get Categories related to user as long as the user has EDIT FILE permission on this category
+        [HttpGet("UserCategoriesEditFilePermission")]
+        public async Task<IActionResult> GetUserCategoriesEditFilePermission(CancellationToken ct)
+        {
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (claim == null)
+                return Ok(new List<CategoryDto>());
+
+            int userId = int.Parse(claim.Value);
+
+            var result = await _service.GetUserCategoriesEditFilePermissionAsync(userId, ct);
+
+            return Ok(result);
+        }
+
+        [HttpGet("UserCategoriesDeleteFilePermission")]
+        public async Task<IActionResult> GetUserCategoriesDeleteFilePermission(CancellationToken ct)
+        {
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (claim == null)
+                return Ok(new List<CategoryDto>());
+
+            int userId = int.Parse(claim.Value);
+
+            var result = await _service.GetUserCategoriesDeleteFilePermissionAsync(userId, ct);
+
+            return Ok(result);
+        }
 
         [HttpPost]
         [Authorize]
         public async Task<IActionResult> Create(string name, CancellationToken ct)
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            await _service.CreateAsync(userId, name, ct);
+                await _service.CreateAsync(userId, name, ct);
 
-            return Ok();
+                return Ok(new { message = "Category created successfully" });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"CategoryController.Create error: {ex.Message}");
+                return BadRequest(new { error = ex.Message });
+            }
         }
 
         [HttpPut("{id}")]
         [Authorize]
         public async Task<IActionResult> Update(int id, string name, CancellationToken ct)
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            await _service.UpdateAsync(userId, id, name, ct);
+                await _service.UpdateAsync(userId, id, name, ct);
 
-            return Ok();
+                return Ok(new { message = "Category updated successfully" });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"CategoryController.Update error: {ex.Message}");
+                return BadRequest(new { error = ex.Message });
+            }
         }
 
         [HttpDelete("{id}")]
         [Authorize]
         public async Task<IActionResult> Delete(int id, CancellationToken ct)
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            await _service.DeleteAsync(userId, id, ct);
+                await _service.DeleteAsync(userId, id, ct);
 
-            return Ok();
+                return Ok(new { message = "Category deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"CategoryController.Delete error: {ex.Message}");
+                return BadRequest(new { error = ex.Message });
+            }
         }
         [HttpPut("activate-by-name")]
         [Authorize(Roles = "Admin")]

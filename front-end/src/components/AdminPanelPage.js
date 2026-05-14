@@ -7,7 +7,7 @@ import './AdminPanelPage.css';
 const DEBOUNCE_DELAY = 300;
 
 export default function AdminPanelPage() {
-  const { categories } = useContext(CategoryContext);
+  const { categories, setCategories } = useContext(CategoryContext);
   const { token } = useAuth();
 
   // User search states
@@ -36,6 +36,12 @@ export default function AdminPanelPage() {
   const [editingPermission, setEditingPermission] = useState(null);
   const [editPermissionName, setEditPermissionName] = useState('');
   const [savingPermission, setSavingPermission] = useState(null); // Optimistic loading
+
+  // User creation
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [showNewUserPassword, setShowNewUserPassword] = useState(false);
+  const [creatingUser, setCreatingUser] = useState(false);
 
   const timeoutRef = useRef(null);
 
@@ -136,7 +142,7 @@ export default function AdminPanelPage() {
 
     setCreatingCategory(true);
     try {
-      await apiService.createCategory(newCategoryName.trim(), token);
+      const newCat = await apiService.createCategory(newCategoryName.trim(), token);
       setNewCategoryName('');
       
       // Fetch all categories to update the All Categories list
@@ -145,6 +151,10 @@ export default function AdminPanelPage() {
       // Fetch active categories to update the Category Permissions table
       const activeData = await apiService.getActiveCategories(token);
       setActiveCategories(activeData);
+      
+      // Update CategoryContext with the new category
+      const updatedCategories = await apiService.getUserCategories(token);
+      setCategories(updatedCategories.map(cat => ({ id: cat.id, name: cat.name })));
       
       // If a user is selected, update tempPermissions to include the new category
       if (selectedUserId) {
@@ -322,6 +332,11 @@ export default function AdminPanelPage() {
     console.log('Sending assign payload:', data); // Debug
     try {
       await apiService.assignUserCategoryPermission(data, token);
+      
+      // Update CategoryContext to include newly assigned categories with WRITE permission
+      const updatedCategories = await apiService.getUserCategories(token);
+      setCategories(updatedCategories.map(cat => ({ id: cat.id, name: cat.name })));
+      
       alert('Permissions assigned successfully!');
       handleClearUser();
     } catch (error) {
@@ -390,6 +405,49 @@ export default function AdminPanelPage() {
     console.log('Skipped DELETE API for ID:', id);
   };
 
+  // Create user
+  const handleCreateUser = async () => {
+    if (!newUserName.trim()) {
+      alert('Please enter a username');
+      return;
+    }
+    if (!newUserPassword.trim()) {
+      alert('Please enter a password');
+      return;
+    }
+
+    // Check for duplicate username in search results
+    const duplicate = searchUsers.some(u => u.username.toLowerCase() === newUserName.toLowerCase());
+    if (duplicate) {
+      alert('User already exists');
+      return;
+    }
+
+    setCreatingUser(true);
+    try {
+      const result = await apiService.createUser(newUserName.trim(), newUserPassword, token);
+      
+      // Add user to search list immediately (real-time update)
+      const newUser = {
+        id: Date.now(), // Temporary ID - will be updated on next search
+        username: newUserName.trim()
+      };
+      setSearchUsers(prev => [newUser, ...prev]);
+      
+      // Clear form
+      setNewUserName('');
+      setNewUserPassword('');
+      setShowNewUserPassword(false);
+      
+      alert('User created successfully!');
+    } catch (error) {
+      console.error('Create user failed:', error);
+      alert(`Failed to create user: ${error.message}`);
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
   const isTableDisabled = selectedUserId === null;
 
   return (
@@ -453,7 +511,13 @@ export default function AdminPanelPage() {
               </thead>
               <tbody>
                 {activeCategories.map((cat) => {
-                  const data = tempPermissions[cat.name] || { enabled: false, read: false, write: false, editCategories: false };
+                  // Create default permission object from current permissions array
+                  const defaultPermissions = permissions.reduce((acc, perm) => {
+                    acc[perm.name.toLowerCase()] = false;
+                    return acc;
+                  }, { enabled: false });
+                  
+                  const data = tempPermissions[cat.name] || defaultPermissions;
                   return (
                     <tr key={cat.name} className={`permission-row ${data.enabled ? 'enabled' : 'disabled'}`}>
                       <td className="category-name-cell">
@@ -553,7 +617,45 @@ export default function AdminPanelPage() {
           </div>
         </div>
 
-        {/* Permissions Management - Unified Design */}
+        {/* Add User - Unified Design */}
+        <div className="permissions-management-section">
+          <h3>Add User</h3>
+          <div className="create-form">
+            <input
+              className="form-input"
+              placeholder="Username"
+              value={newUserName}
+              onChange={(e) => setNewUserName(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleCreateUser()}
+            />
+            <div className="password-input-wrapper">
+              <input
+                className="form-input password-input"
+                type={showNewUserPassword ? 'text' : 'password'}
+                placeholder="Password"
+                value={newUserPassword}
+                onChange={(e) => setNewUserPassword(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleCreateUser()}
+              />
+              <button
+                className="password-toggle-btn"
+                onClick={() => setShowNewUserPassword(!showNewUserPassword)}
+                type="button"
+              >
+                {showNewUserPassword ? '👁️' : '👁️‍🗨️'}
+              </button>
+            </div>
+            <button 
+              className="create-btn" 
+              onClick={handleCreateUser}
+              disabled={creatingUser}
+            >
+              {creatingUser ? 'Creating...' : 'Create'}
+            </button>
+          </div>
+        </div>
+
+        {/* Permissions Management - Unified Design 
         <div className="permissions-management-section">
           <h3>Permissions Management</h3>
           <div className="create-form">
@@ -611,7 +713,7 @@ export default function AdminPanelPage() {
                           </button>
                           {/* <button className="delete-btn" onClick={() => handleDeletePermission(p.id)}>
                             Delete
-                          </button> */}
+                          </button> 
                         </>
                       )}
                     </td>
@@ -621,6 +723,7 @@ export default function AdminPanelPage() {
             </table>
           </div>
         </div>
+        */}
       </div>
     </div>
   );

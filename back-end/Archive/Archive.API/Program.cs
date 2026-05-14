@@ -1,8 +1,9 @@
+using Archive.Application.DependencyInjection;
+using Archive.Infrastructure.DependencyInjection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using Archive.Infrastructure.DependencyInjection;
-using Archive.Application.DependencyInjection;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,9 +17,16 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // =========================
 builder.Services.AddApplication(builder.Configuration);
 // =========================
-// Controllers
+// Controllers with Custom JSON Serialization
 // =========================
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Configure JSON serialization to handle UTC DateTime values correctly
+        // This ensures DateTime values are serialized with 'Z' suffix to indicate UTC
+        // which allows JavaScript to correctly interpret them as UTC timestamps
+        options.JsonSerializerOptions.Converters.Add(new Archive.API.Converters.UtcDateTimeJsonConverter());
+    });
 
 // =========================
 // Swagger + JWT Support
@@ -85,23 +93,25 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "http://localhost:3001")
+        policy.WithOrigins("http://localhost:3000", "http://localhost:3001", "http://192.168.3.33:85",
+            "http://192.168.3.33")
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
     });
 });
 
+
 var app = builder.Build();
 
 // =========================
 // Middleware pipeline
 // =========================
-if (app.Environment.IsDevelopment())
-{
+//if (app.Environment.IsDevelopment())
+//{
     app.UseSwagger();
     app.UseSwaggerUI();
-}
+//}
 
 app.UseHttpsRedirection();
 

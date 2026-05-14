@@ -19,7 +19,7 @@ namespace Archive.Infrastructure.Repositories
             int page,
             int pageSize,
             int? categoryId = null,
-            string? fileNumber = null,
+            string? fileName = null,
             string? year = null,
             string? status = null,
             CancellationToken ct = default)
@@ -40,10 +40,10 @@ namespace Archive.Infrastructure.Repositories
                 query = query.Where(f => f.CategoryId == categoryId.Value);
             }
 
-            // Apply file number filter (partial search)
-            if (!string.IsNullOrEmpty(fileNumber))
+            // Apply file name filter (partial search)
+            if (!string.IsNullOrEmpty(fileName))
             {
-                query = query.Where(f => f.FileNumber.Contains(fileNumber));
+                query = query.Where(f => f.FileName.Contains(fileName));
             }
 
             // Apply year filter on InputDate (text-based search)
@@ -79,7 +79,8 @@ namespace Archive.Infrastructure.Repositories
                         ? EF.Functions.DateDiffDay(now, f.ExpireDate.Value)
                         : int.MaxValue
                 })
-                .OrderBy(x =>
+                .OrderBy(x => x.File.IsDeleted)
+                .ThenBy(x =>
                     x.RemainingDays <= 14 ? 1 :
                     x.RemainingDays <= 180 ? 2 : 3)
                 .ThenBy(x => x.RemainingDays)

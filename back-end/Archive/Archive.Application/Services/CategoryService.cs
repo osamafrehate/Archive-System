@@ -28,7 +28,7 @@ namespace Archive.Application.Services
                 Id = x.Id,
                 Name = x.Name,
                 IsActive = x.IsActive,
-                
+
             }).ToList();
         }
 
@@ -53,10 +53,10 @@ namespace Archive.Application.Services
         public async Task UpdateAsync(int userId, int categoryId, string name, CancellationToken ct)
         {
             var hasPermission = await _permissionService.HasPermissionAsync(
-                userId, categoryId, "EDIT");
+                userId, categoryId, "EDIT CATEGORY");
 
             if (!hasPermission)
-                throw new Exception("No EDIT permission");
+                throw new Exception("No EDIT CATEGORY permission");
 
             var category = await _repo.GetByIdAsync(categoryId, ct)
                 ?? throw new Exception("Category not found");
@@ -74,10 +74,10 @@ namespace Archive.Application.Services
         public async Task DeleteAsync(int userId, int categoryId, CancellationToken ct)
         {
             var hasPermission = await _permissionService.HasPermissionAsync(
-                userId, categoryId, "EDIT");
+                userId, categoryId, "EDIT CATEGORY");
 
             if (!hasPermission)
-                throw new Exception("No EDIT permission");
+                throw new Exception("No EDIT CATEGORY permission");
 
             var category = await _repo.GetByIdAsync(categoryId, ct)
                 ?? throw new Exception("Category not found");
@@ -119,6 +119,30 @@ namespace Archive.Application.Services
                 IsActive = c.IsActive,
             }).ToList();
         }
+        public async Task<List<CategoryDto>> GetUserCategoriesEditFilePermissionAsync(int userId, CancellationToken ct)
+        {
+            var categories = await _repo.GetUserCategoriesEditFilePermissionAsync(userId, ct);
+
+            return categories.Select(c => new CategoryDto
+            {
+                Id = c.Id,
+                Name = c.Name,
+                IsActive = c.IsActive,
+            }).ToList();
+        }
+
+        public async Task<List<CategoryDto>> GetUserCategoriesDeleteFilePermissionAsync(int userId, CancellationToken ct)
+        {
+            var categories = await _repo.GetUserCategoriesDeleteFilePermissionAsync(userId, ct);
+
+            return categories.Select(c => new CategoryDto
+            {
+                Id = c.Id,
+                Name = c.Name,
+                IsActive = c.IsActive,
+            }).ToList();
+        }
+
         public async Task ActivateByNameAsync(string categoryName, CancellationToken ct)
         {
             await _repo.ActivateByNameAsync(categoryName, ct);

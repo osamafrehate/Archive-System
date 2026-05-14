@@ -176,7 +176,39 @@ export const apiService = {
       throw new Error(error.message || `HTTP ${response.status}`);
     }
     const data = await response.json();
-    return data.map(cat => ({ id: cat.id, name: cat.name })); 
+    return data.map(cat => ({ id: cat.id, name: cat.name }));
+  },
+
+  getUserCategoriesEditFilePermission: async (token) => {
+    if (!token) throw new Error('No auth token');
+    const response = await fetchWithAuth(`${API_BASE_URL}/categories/UserCategoriesEditFilePermission`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || `HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    return data.map(cat => ({ id: cat.id, name: cat.name }));
+  },
+
+  getUserCategoriesDeleteFilePermission: async (token) => {
+    if (!token) throw new Error('No auth token');
+    const response = await fetchWithAuth(`${API_BASE_URL}/categories/UserCategoriesDeleteFilePermission`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || `HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    return data.map(cat => ({ id: cat.id, name: cat.name }));
   },
 
   getActiveCategories: async (token) => {
@@ -220,19 +252,21 @@ export const apiService = {
         'Content-Type': 'application/json'
       }
     });
+    
+    // Parse response regardless of status
+    let data = {};
+    try {
+      data = await response.json();
+    } catch {
+      // Some responses might not have JSON body
+    }
+    
     if (!response.ok) {
-      let errorMessage = `HTTP ${response.status}`;
-      try {
-        const error = await response.json();
-        errorMessage = error.message || error.title || errorMessage;
-      } catch {
-        // Fallback to status text
-        errorMessage = response.statusText || errorMessage;
-      }
+      const errorMessage = data.error || data.message || `HTTP ${response.status}: ${response.statusText}`;
       throw new Error(errorMessage);
     }
-    // The backend returns Ok() with empty body, so we construct the response
-    return { success: true, message: 'Category created successfully' };
+    
+    return { success: true, message: data.message || 'Category created successfully' };
   },
 
   searchUsers: async (keyword, token) => {
@@ -248,6 +282,42 @@ export const apiService = {
       throw new Error(error.message || `HTTP ${response.status}`);
     }
     return response.json();
+  },
+
+  createUser: async (username, password, token) => {
+    if (!token) throw new Error('No auth token');
+    if (!username || username.trim() === '') throw new Error('Username cannot be empty');
+    if (!password || password.trim() === '') throw new Error('Password cannot be empty');
+    
+    const response = await fetchWithAuth(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ username: username.trim(), password })
+    });
+    
+    // Parse response - handle both JSON and plain text
+    let data = {};
+    const contentType = response.headers.get('content-type');
+    try {
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        // Plain text response - just store the message
+        data = { message: text };
+      }
+    } catch {
+      // If parsing fails, continue with empty data
+    }
+    
+    if (!response.ok) {
+      const errorMessage = data.message || data.error || `HTTP ${response.status}: ${response.statusText}`;
+      throw new Error(errorMessage);
+    }
+    
+    return { success: true, username: username.trim(), message: data.message || 'User created successfully' };
   },
 
   activateCategoryByName: async (name, token) => {
@@ -395,8 +465,8 @@ export const apiService = {
     if (filters.categoryId) {
       queryParams.append('categoryId', filters.categoryId);
     }
-    if (filters.fileNumber) {
-      queryParams.append('fileNumber', filters.fileNumber);
+    if (filters.fileName) {
+      queryParams.append('fileName', filters.fileName);
     }
     if (filters.year) {
       queryParams.append('year', filters.year);
@@ -462,6 +532,37 @@ export const apiService = {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ fileName: newName.trim() })
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || `HTTP ${response.status}`);
+    }
+    return response.json();
+  },
+
+  updateFileMetadata: async (fileId, metadata, token) => {
+    if (!token) throw new Error('No auth token');
+    const response = await fetchWithAuth(`${API_BASE_URL}/files/${fileId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(metadata)
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || `HTTP ${response.status}`);
+    }
+    return response.json();
+  },
+
+  deleteFile: async (fileId, token) => {
+    if (!token) throw new Error('No auth token');
+    const response = await fetchWithAuth(`${API_BASE_URL}/files/${fileId}/delete`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      }
     });
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));

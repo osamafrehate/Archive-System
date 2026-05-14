@@ -9,7 +9,7 @@ namespace Archive.Application.Interfaces.Repositories
             int page,
             int pageSize,
             int? categoryId = null,
-            string? fileNumber = null,
+            string? fileName = null,
             string? year = null,
             string? status = null,
             CancellationToken ct = default);

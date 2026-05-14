@@ -65,7 +65,7 @@
 
 .modal-container h2 {
   text-align: center;
-  margin-top: 0;
+  
   margin-bottom: 14px;
 }
 
@@ -88,6 +88,7 @@
   padding: 8px;
   border: 1px solid #c4c4c4;
   border-radius: 6px;
+  margin-left:2%;
 }
 
 .delete-button {
@@ -97,6 +98,7 @@
   padding: 8px 10px;
   border-radius: 6px;
   cursor: pointer;
+  margin-right: 2%;
 }
 
 .add-button {
@@ -106,7 +108,11 @@
   padding: 8px 12px;
   border-radius: 6px;
   cursor: pointer;
-  margin-top: 12px;
+  margin-top: 4%;
+  margin-left: 2%;
+  margin-right: 2%;
+  width: fit-content;
+  align-self: center;
 }
 
 .modal-actions {

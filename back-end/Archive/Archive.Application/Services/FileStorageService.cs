@@ -6,7 +6,8 @@ namespace Archive.Application.Services
     
     public class FileStorageService : IFileStorageService
     {
-        private const string BasePath = @"C:\Archive";
+        private const string BasePath = @"E:\FileArchive";
+        //private const string BasePath = @"C:\FileArchive";
 
         public async Task<string> SaveFileAsync(
             string categoryName,

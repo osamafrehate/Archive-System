@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { apiService } from '../services/apiService.js';
 import { formatDate } from '../utils/dateUtils.js';
@@ -21,13 +21,18 @@ function getStatusColor(expireDateString) {
   return { colorClass: 'status-green', text: `${days} days` };
 }
 
-export default function StatusFileRow({ file: propFile, showAmount = false, onFileRename }) {
+export default function StatusFileRow({ file: propFile, showAmount = false, onFileRename, canEdit = false, onEdit, canDelete = false, onDelete }) {
   const { token } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [isRenaming, setIsRenaming] = useState(false);
   const status = getStatusColor(propFile.expireDate);
   const [filename, setFilename] = useState(propFile.originalFilename || propFile.fileName || 'file');
+
+  // Sync filename when prop changes (e.g., after metadata update)
+  useEffect(() => {
+    setFilename(propFile.originalFilename || propFile.fileName || 'file');
+  }, [propFile.fileName, propFile.originalFilename]);
 
   const inputDateFormatted = formatDate(propFile.inputDate);
   const expireDateFormatted = formatDate(propFile.expireDate);
@@ -66,8 +71,20 @@ export default function StatusFileRow({ file: propFile, showAmount = false, onFi
   };
 
   const handleEdit = () => {
-    setEditName(filename);
-    setIsEditing(true);
+    if (onEdit) {
+      // Open the edit modal with full file data
+      onEdit(propFile);
+    } else {
+      // Fallback to inline editing if modal handler not provided
+      setEditName(filename);
+      setIsEditing(true);
+    }
+  };
+
+  const handleDelete = () => {
+    if (onDelete) {
+      onDelete(propFile);
+    }
   };
 
   const handleCancel = () => {
@@ -128,32 +145,58 @@ export default function StatusFileRow({ file: propFile, showAmount = false, onFi
             </div>
           ) : (
             <>
-              <a 
-                href="#"
-                onClick={handlePreview}
-                className="file-link"
-                title="Preview file (opens in new tab)"
-              >
-                {filename}
-              </a>
-              <a 
-                href="#"
-                onClick={handleDownload}
-                className="file-download"
-                title="Download file"
-                aria-label="Download file"
-              >
-                <span aria-hidden="true">⬇</span>
-              </a>
-              <a 
-                href="#"
-                onClick={handleEdit}
-                className="file-edit"
-                title="Rename file"
-                aria-label="Rename file"
-              >
-                ✏️
-              </a>
+              {!propFile.isDeleted && (
+                <>
+                  <a 
+                    href="#"
+                    onClick={handleDownload}
+                    className="file-download"
+                    title="Download file"
+                    aria-label="Download file"
+                  >
+                    <span aria-hidden="true">⬇</span>
+                  </a>
+                  {canEdit && (
+                    <a 
+                      href="#"
+                      onClick={handleEdit}
+                      className="file-edit"
+                      title="Edit file metadata"
+                      aria-label="Edit file metadata"
+                    >
+                      ✏️
+                    </a>
+                  )}
+                  {canDelete && (
+                    <a 
+                      href="#"
+                      onClick={handleDelete}
+                      className="file-delete"
+                      title="Delete file"
+                      aria-label="Delete file"
+                    >
+                      🗑️
+                    </a>
+                  )}
+                </>
+              )}
+              {propFile.isDeleted ? (
+                <span 
+                  className="file-link"
+                  style={{ textDecoration: 'line-through', color: '#999' }}
+                >
+                  {filename}
+                </span>
+              ) : (
+                <a 
+                  href="#"
+                  onClick={handlePreview}
+                  className="file-link"
+                  title="Preview file (opens in new tab)"
+                >
+                  {filename}
+                </a>
+              )}
             </>
           )}
         </div>
@@ -161,14 +204,14 @@ export default function StatusFileRow({ file: propFile, showAmount = false, onFi
       <td>{propFile.fileNumber || '-'}</td>
       <td className="date-cell">
         <div className="date-display">
-          <div className="date-part">{inputDateFormatted.date}</div>
-          <div className="time-part">{inputDateFormatted.time}</div>
+          <div className="date-part">{propFile.isDeleted ? '-' : inputDateFormatted.date}</div>
+          {/* <div className="time-part">{inputDateFormatted.time}</div> */}
         </div>
       </td>
       <td className="date-cell">
         <div className="date-display">
-          <div className="date-part">{expireDateFormatted.date}</div>
-          <div className="time-part">{expireDateFormatted.time}</div>
+          <div className="date-part">{propFile.isDeleted ? '-' : expireDateFormatted.date}</div>
+          {/* <div className="time-part">{expireDateFormatted.time}</div> */}
         </div>
       </td>
       <td className="date-cell">
@@ -180,10 +223,10 @@ export default function StatusFileRow({ file: propFile, showAmount = false, onFi
       <td>{propFile.documentType || propFile.categoryName || '-'}</td>
       <td>
         {showAmount ? (
-          propFile.amount !== undefined ? `$${propFile.amount.toLocaleString()}` : '-'
+          propFile.isDeleted ? '0' : propFile.amount !== undefined ? `$${propFile.amount.toLocaleString()}` : '-'
         ) : (
           <span className={`status-chip ${status.colorClass}`}>
-            {status.text}
+            {propFile.isDeleted ? 'Deleted' : status.text}
           </span>
         )}
       </td>
